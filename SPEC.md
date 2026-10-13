@@ -1,7 +1,7 @@
 # StillRoom — Product Spec
 
 Source: user interview (2026-10).
-Status: v0.8 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
+Status: v0.9 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
 Sections: 1 Ideation · 2 PRD · 3 TRD · 4 Design Spec · 5 Open Questions · 6 Market Research & Decisions. Agent instructions live in `AGENTS.md`.
 
 Platform decision: **laptop only** (desktop browser, landscape). No phone, no tablet, no sync.
@@ -191,7 +191,14 @@ Text on pastel fills uses `--text`, never white (contrast ≥ 4.5:1). Font: Pret
 | twilight | violet `#D9C6F2`, orchid `#F6C6EA`, peach `#FFD6C8` |
 | night | lavender `#C9C3EE`, blue `#B9C3EC`, mauve `#E9CFEA` |
 
-  Furniture, window, shelf, and item art are unchanged.
+  Furniture, window, shelf, and item art keep their shapes and positions.
+- **Lofi line-art form** (reference: lofi room illustration; form only, colors stay time-of-day):
+  - Every opaque shape of the window frame, curtains, shelf, desk, base objects, and all room items gets a 2.5 px outline in `--line-art` (a time-tinted ink: the phase's `--prism-1` mixed into `#4A4857`). Translucent decals, the sky and window view, blooms, and glows stay outline-free.
+  - **Light beam:** sunlight from the window falls diagonally down-right across the wall and floor. It is drawn by shading everything outside the beam with `--shade` at `--shade-opacity` (stronger at twilight/night), so it reads even on a white wall.
+  - **Leaf shadow:** a soft palm-leaf shadow on the upper right wall, inside the beam.
+  - **Ground shadows:** soft ellipses under the desk and floor items.
+  - **Base decor:** a tall leafy floor plant at the left wall (always present, not a slot).
+  - Static only (no animated light), so the room stays cheap to leave open for hours.
 - Slots: `window`, `wall`, `shelf`, `desk`, `lighting`, `floor`.
 - **Mood (from the mood board): "beauty inside emptiness".** Out the window, a lone ivory tower rises from a sea of clouds. Low-poly faces (two tones per surface) with a few square "pixel" marks. Calm and empty, never busy.
 - **Sky follows 8 phases** (visual only; drops still use the 4 windows in §2.4). Mood board hex values, softened toward white/lavender to stay pastel:
@@ -208,7 +215,7 @@ Text on pastel fills uses `--text`, never white (contrast ≥ 4.5:1). Font: Pret
 | night | 21–03 | `#191970` → `#000080` | indigo, moon, lamps glow |
 
 - Theme windows change the foreground (garden hedge, night sea with lighthouse); the tower stays on the horizon.
-- Art: original flat pastel illustrations as SVG, drawn for this project. One React component per room item and piece (`components/art/`), colored via CSS variables so time-of-day tints and night mode apply without new files. Style rules: 2–3 flat fills per object, no outlines, one darker shade of the base fill for shadow, rounded corners, no gradients except the window sky. No 3D.
+- Art: original flat pastel illustrations as SVG, drawn for this project. One React component per room item and piece (`components/art/`), colored via CSS variables so time-of-day tints and night mode apply without new files. Style rules: 2–3 flat fills per object, a 2.5 px `--line-art` outline on opaque shapes (applied by the room's line-art group, not per shape), one darker shade of the base fill for shadow, rounded corners, no gradients except the window sky, prism blooms, and glows. No 3D.
 
 ### 4.4 Ambient mode (the main mode)
 - After 8 s without input, all UI fades out except a small timer pill (top right) and today's total. Any mouse move or key press brings UI back. Cursor hides in ambient mode.
@@ -278,6 +285,7 @@ Research on variable rewards: variable-ratio schedules drive the most consistent
 | D8 | Recipes ×5 (105–140 pieces) and state v3 | ≈ 36 pieces/h is ~4.7× the D2 economy; ×5 keeps ≈ 3–4 h per theme. v3 removes the unused dry-pity counter. | Keeping D5 recipes (each theme in under an hour). |
 | D9 | Timer pill shows pieces earned this session; next-drop countdown removed (state v4) | User request (2026-10-13): the running total is the motivating number; a countdown adds clock-watching. Stored in state so it survives reload. | In-memory counter (lost on reload). |
 | D10 | Prism backdrop on white: ivory wall/floor with time-of-day pastel blooms; UI accent becomes ivory; focus/outline use deep ivory `--ring` | User request (2026-10-13) with a "+prism" mood board. Radial gradients instead of blur filters keep an all-day backdrop cheap. A separate `--ring` keeps focus visible, since ivory on white is invisible. | Per-theme bloom colors; wall-only change; lavender accent kept. |
+| D11 | Lofi line-art form: outlines on furniture and items, window light beam via outside shading, leaf shadow, ground shadows, floor plant | User request (2026-10-13) with a lofi room reference (form only). Redrawing the existing SVG keeps time-of-day color, decorating, and crisp scaling. Outlines come from one CSS rule on a group, so new art gets them for free. | AI-generated raster background (breaks slot alignment and the original-SVG rule). |
 
 Taste call to revisit after a week of real use: if themes still go too fast, raise recipes rather than shrinking drops (bigger drops are the fun part).
 

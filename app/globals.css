@@ -10,6 +10,7 @@
 @property --prism-1 { syntax: "<color>"; inherits: true; initial-value: #bfe6f7; }
 @property --prism-2 { syntax: "<color>"; inherits: true; initial-value: #cfefe3; }
 @property --prism-3 { syntax: "<color>"; inherits: true; initial-value: #fff6e5; }
+@property --shade-opacity { syntax: "<number>"; inherits: true; initial-value: 0.1; }
 
 :root {
   /* UI tokens (SPEC §4.2) */
@@ -70,9 +71,13 @@
   --prism-1: #bfe6f7;
   --prism-2: #cfefe3;
   --prism-3: #fff6e5;
+  /* lofi line art: ink and shade are tinted by the current phase */
+  --line-art: color-mix(in oklab, var(--prism-1) 30%, #4a4857);
+  --shade: color-mix(in oklab, var(--prism-1) 55%, #4a4857);
+  --shade-opacity: 0.1;
 
   transition: --sky-top 2s ease, --sky-bottom 2s ease, --tint 2s ease, --tint-opacity 2s ease, --glow 2s ease,
-    --prism-1 2s ease, --prism-2 2s ease, --prism-3 2s ease;
+    --prism-1 2s ease, --prism-2 2s ease, --prism-3 2s ease, --shade-opacity 2s ease;
 }
 
 /* Night window (21–05): UI switches to dark tokens. */
@@ -93,14 +98,14 @@
 }
 
 /* Eight sky phases. Source palette from the mood board, softened toward white/lavender to stay pastel. */
-:root[data-sky="predawn"] { --sky-top: color-mix(in oklab, #708090 75%, #b9a7e8); --sky-bottom: color-mix(in oklab, #4b0082 45%, #b9a7e8); --tint: #9a96c4; --tint-opacity: 0.3; --glow: 0.7; --prism-1: #cbbef0; --prism-2: #b8c4e8; --prism-3: #f2d4e4; }
-:root[data-sky="dawn"] { --sky-top: #e6e6fa; --sky-bottom: #ffd1dc; --tint: #ffd9d0; --tint-opacity: 0.1; --glow: 0.25; --prism-1: #ffd1dc; --prism-2: #e6e6fa; --prism-3: #ffe1cc; }
-:root[data-sky="morning"] { --sky-top: color-mix(in oklab, #87ceeb 60%, white); --sky-bottom: #f0f8ff; --tint: #ffffff; --tint-opacity: 0; --glow: 0; --prism-1: #bfe6f7; --prism-2: #cfefe3; --prism-3: #fff6e5; }
-:root[data-sky="midday"] { --sky-top: color-mix(in oklab, #00bfff 55%, white); --sky-bottom: #ffffff; --tint: #ffffff; --tint-opacity: 0; --glow: 0; --prism-1: #b8e4fa; --prism-2: #e3f4ff; --prism-3: #d3f2e6; }
-:root[data-sky="afternoon"] { --sky-top: color-mix(in oklab, #ffd700 45%, white); --sky-bottom: #f5f5dc; --tint: #ffe9b0; --tint-opacity: 0.1; --glow: 0.1; --prism-1: #ffe9a8; --prism-2: #f5f0da; --prism-3: #ffdcc2; }
-:root[data-sky="evening"] { --sky-top: color-mix(in oklab, #ffa500 55%, white); --sky-bottom: color-mix(in oklab, #ff7f50 65%, white); --tint: #f7a889; --tint-opacity: 0.18; --glow: 0.5; --prism-1: #ffd0a8; --prism-2: #ffc1b0; --prism-3: #fbd3dc; }
-:root[data-sky="twilight"] { --sky-top: color-mix(in oklab, #4b0082 70%, #b9a7e8); --sky-bottom: color-mix(in oklab, #ff00ff 45%, white); --tint: #9b7fc9; --tint-opacity: 0.32; --glow: 0.75; --prism-1: #d9c6f2; --prism-2: #f6c6ea; --prism-3: #ffd6c8; }
-:root[data-sky="night"] { --sky-top: color-mix(in oklab, #191970 85%, #b9a7e8); --sky-bottom: color-mix(in oklab, #000080 70%, #b9a7e8); --tint: #5a5e9e; --tint-opacity: 0.38; --glow: 0.85; --prism-1: #c9c3ee; --prism-2: #b9c3ec; --prism-3: #e9cfea; }
+:root[data-sky="predawn"] { --sky-top: color-mix(in oklab, #708090 75%, #b9a7e8); --sky-bottom: color-mix(in oklab, #4b0082 45%, #b9a7e8); --tint: #9a96c4; --tint-opacity: 0.3; --glow: 0.7; --prism-1: #cbbef0; --prism-2: #b8c4e8; --prism-3: #f2d4e4; --shade-opacity: 0.3; }
+:root[data-sky="dawn"] { --sky-top: #e6e6fa; --sky-bottom: #ffd1dc; --tint: #ffd9d0; --tint-opacity: 0.1; --glow: 0.25; --prism-1: #ffd1dc; --prism-2: #e6e6fa; --prism-3: #ffe1cc; --shade-opacity: 0.14; }
+:root[data-sky="morning"] { --sky-top: color-mix(in oklab, #87ceeb 60%, white); --sky-bottom: #f0f8ff; --tint: #ffffff; --tint-opacity: 0; --glow: 0; --prism-1: #bfe6f7; --prism-2: #cfefe3; --prism-3: #fff6e5; --shade-opacity: 0.1; }
+:root[data-sky="midday"] { --sky-top: color-mix(in oklab, #00bfff 55%, white); --sky-bottom: #ffffff; --tint: #ffffff; --tint-opacity: 0; --glow: 0; --prism-1: #b8e4fa; --prism-2: #e3f4ff; --prism-3: #d3f2e6; --shade-opacity: 0.08; }
+:root[data-sky="afternoon"] { --sky-top: color-mix(in oklab, #ffd700 45%, white); --sky-bottom: #f5f5dc; --tint: #ffe9b0; --tint-opacity: 0.1; --glow: 0.1; --prism-1: #ffe9a8; --prism-2: #f5f0da; --prism-3: #ffdcc2; --shade-opacity: 0.12; }
+:root[data-sky="evening"] { --sky-top: color-mix(in oklab, #ffa500 55%, white); --sky-bottom: color-mix(in oklab, #ff7f50 65%, white); --tint: #f7a889; --tint-opacity: 0.18; --glow: 0.5; --prism-1: #ffd0a8; --prism-2: #ffc1b0; --prism-3: #fbd3dc; --shade-opacity: 0.18; }
+:root[data-sky="twilight"] { --sky-top: color-mix(in oklab, #4b0082 70%, #b9a7e8); --sky-bottom: color-mix(in oklab, #ff00ff 45%, white); --tint: #9b7fc9; --tint-opacity: 0.32; --glow: 0.75; --prism-1: #d9c6f2; --prism-2: #f6c6ea; --prism-3: #ffd6c8; --shade-opacity: 0.26; }
+:root[data-sky="night"] { --sky-top: color-mix(in oklab, #191970 85%, #b9a7e8); --sky-bottom: color-mix(in oklab, #000080 70%, #b9a7e8); --tint: #5a5e9e; --tint-opacity: 0.38; --glow: 0.85; --prism-1: #c9c3ee; --prism-2: #b9c3ec; --prism-3: #e9cfea; --shade-opacity: 0.32; }
 
 @theme inline {
   --color-bg: var(--bg);
@@ -179,4 +184,12 @@ body {
 /* Ivory accent fills need an edge to read on the white room. */
 .bg-primary {
   border: 1px solid var(--primary-line);
+}
+
+/* Lofi line art (SPEC §4.3): outline every opaque shape inside the room's line-art group.
+   Shapes that set their own stroke or are translucent decals are left alone. */
+.lineart :is(path, rect, circle, ellipse):not([stroke]):not([opacity]) {
+  stroke: var(--line-art);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
 }

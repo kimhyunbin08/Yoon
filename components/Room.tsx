@@ -61,6 +61,11 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
         <clipPath id={`glass${uid}`}>
           <rect x="522" y="118" width="396" height="364" rx="12" />
         </clipPath>
+        {/* lit area of the light beam: everything outside it gets the lofi shade */}
+        <mask id={`shade${uid}`}>
+          <rect width="1440" height="900" fill="white" />
+          <path d={BEAM} fill="black" />
+        </mask>
         <mask id={`moon${uid}`}>
           <circle cx="620" cy="190" r="30" fill="white" />
           <circle cx="634" cy="180" r="27" fill="black" />
@@ -82,17 +87,22 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
         <ellipse cx="780" cy="830" rx="720" ry="170" transform="rotate(-6 780 830)" fill={`url(#prism3${uid})`} />
       </g>
 
-      {/* window */}
-      <rect x="500" y="96" width="440" height="408" rx="22" fill={v("white")} />
+      {/* sky and view stay outline-free */}
       <g clipPath={`url(#glass${uid})`}>
         <rect x="522" y="118" width="396" height="364" fill={`url(#sky${uid})`} />
         <Sky phase={phase} uid={uid} />
         <View view={view} />
       </g>
+
+      <LeafShadow />
+
+      {/* everything below gets lofi outlines (globals.css .lineart) */}
+      <g className="lineart">
+      {/* window frame: drawn as a ring so the glass stays open */}
+      <path d="M522 96h396a22 22 0 0 1 22 22v364a22 22 0 0 1-22 22H522a22 22 0 0 1-22-22V118a22 22 0 0 1 22-22Z M534 118a12 12 0 0 0-12 12v340a12 12 0 0 0 12 12h372a12 12 0 0 0 12-12V130a12 12 0 0 0-12-12Z" fillRule="evenodd" fill={v("white")} />
       <rect x="715" y="118" width="10" height="364" fill={v("white")} />
       <rect x="522" y="295" width="396" height="10" fill={v("white")} />
       <rect x="480" y="496" width="480" height="22" rx="10" fill={v("cream")} />
-      <rect x="492" y="516" width="456" height="6" rx="3" fill={v("wall-d")} />
       {Art("window")}
 
       {/* shelf */}
@@ -102,7 +112,11 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
 
       {Art("wall")}
       {Art("lighting")}
+      <FloorPlant />
       {Art("floor")}
+
+      {/* ground shadow under the desk */}
+      <ellipse cx="720" cy="892" rx="560" ry="24" style={{ fill: "var(--shade)", opacity: 0.22, mixBlendMode: "multiply" }} />
 
       {/* desk */}
       <rect x="250" y="676" width="28" height="224" fill={v("desk-d")} />
@@ -123,6 +137,15 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
       <path d="M1092 414h52l26 58h-104Z" fill={v("mint")} />
       <ellipse cx="1118" cy="472" rx="20" ry="6" fill={v("yellow")} />
       {Art("desk")}
+      </g>
+
+      {/* light beam: shade everything outside it */}
+      <rect
+        width="1440"
+        height="900"
+        mask={`url(#shade${uid})`}
+        style={{ fill: "var(--shade)", opacity: "var(--shade-opacity)", mixBlendMode: "multiply" }}
+      />
 
       {/* time-of-day tint, then lamp glows on top */}
       <rect width="1440" height="900" style={{ fill: "var(--tint)", opacity: "var(--tint-opacity)", mixBlendMode: "multiply" }} />
@@ -158,6 +181,68 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
 }
 
 export const Room = memo(RoomScene);
+
+// Diagonal sunbeam from the upper right, falling across the right wall and floor (lofi reference).
+const BEAM = "M1440 40 L760 470 L520 900 L1440 900 Z";
+
+/** Soft palm-leaf shadow on the lit upper-right wall. Translucent, so it gets no outline. */
+function LeafShadow() {
+  const fronds = [
+    { x: 1450, y: 110, a: 196, len: 300 },
+    { x: 1450, y: 240, a: 170, len: 280 },
+    { x: 1450, y: 380, a: 148, len: 220 },
+  ];
+  return (
+    <g opacity="0.15" style={{ mixBlendMode: "multiply" }} aria-hidden>
+      {fronds.map((f, i) => {
+        const dir = (f.a * Math.PI) / 180;
+        const tip = [f.x + Math.cos(dir) * f.len, f.y + Math.sin(dir) * f.len];
+        return (
+          <g key={i} style={{ fill: "var(--shade)" }}>
+            <path d={`M${f.x} ${f.y} L${tip[0]} ${tip[1]}`} style={{ stroke: "var(--shade)" }} strokeWidth="4" strokeLinecap="round" />
+            {Array.from({ length: 16 }, (_, k) => {
+              const t = 0.1 + (k >> 1) * 0.11;
+              const side = k % 2 ? 1 : -1;
+              const len = 70 * (1 - t * 0.55);
+              const leaf = dir + side * 0.95 - 0.35; // leaflets sweep toward the frond tip
+              const bx = f.x + Math.cos(dir) * f.len * t;
+              const by = f.y + Math.sin(dir) * f.len * t;
+              const cx = bx + Math.cos(leaf) * len * 0.5;
+              const cy = by + Math.sin(leaf) * len * 0.5;
+              return <ellipse key={k} cx={cx} cy={cy} rx={len / 2} ry={7} transform={`rotate(${(leaf * 180) / Math.PI} ${cx} ${cy})`} />;
+            })}
+          </g>
+        );
+      })}
+    </g>
+  );
+}
+
+/** Tall leafy floor plant at the left wall: base decor, always present. */
+function FloorPlant() {
+  const leaves: [number, number, number, string][] = [
+    [96, 560, -35, "green-d"],
+    [150, 540, 30, "green"],
+    [70, 640, -60, "green"],
+    [168, 630, 55, "green-d"],
+    [120, 600, 0, "green"],
+  ];
+  return (
+    <g>
+      <path d="M120 800 C118 720 112 660 100 590 M122 800 C128 720 140 660 150 560" stroke={v("green-d")} strokeWidth="5" fill="none" strokeLinecap="round" />
+      {leaves.map(([x, y, a, c], i) => (
+        <path
+          key={i}
+          transform={`translate(${x} ${y}) rotate(${a})`}
+          d="M0 -48 C30 -40 38 -6 0 40 C-38 -6 -30 -40 0 -48 Z"
+          fill={v(c)}
+        />
+      ))}
+      <path d="M78 790h88l-10 92h-68Z" fill={v("cream")} />
+      <rect x="72" y="782" width="100" height="16" rx="8" fill={v("peach")} />
+    </g>
+  );
+}
 
 const STARS: [number, number, number][] = [
   [560, 150, 2.5], [600, 250, 1.8], [690, 140, 2], [760, 210, 2.6], [820, 140, 1.6],
