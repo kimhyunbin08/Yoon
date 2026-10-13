@@ -63,7 +63,7 @@ export function exportBackup(state: State) {
   const blob = new Blob([JSON.stringify(state, null, 2)], { type: "application/json" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
-  a.download = `jogakbang-backup-${dayKey(Date.now())}.json`;
+  a.download = `stillroom-backup-${dayKey(Date.now())}.json`;
   a.click();
   URL.revokeObjectURL(a.href);
 }

@@ -1,4 +1,4 @@
-# Piece Room (working name, KR: 조각방) — Product Spec
+# StillRoom — Product Spec
 
 Source: user interview (2026-10).
 Status: v0.4 (implemented). Sections: 1 Ideation · 2 PRD · 3 TRD · 4 Design Spec · 5 Open Questions. Agent instructions live in `AGENTS.md`.

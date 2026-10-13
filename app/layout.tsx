@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "조각방",
+  title: "StillRoom",
   description: "켜두고 공부하는 파스텔 공부방",
   manifest: "/manifest.webmanifest",
   icons: { icon: "/icon.svg", apple: "/icon-512.png" },

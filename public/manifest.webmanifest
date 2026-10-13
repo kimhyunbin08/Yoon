@@ -1,6 +1,6 @@
 {
-  "name": "조각방",
-  "short_name": "조각방",
+  "name": "StillRoom",
+  "short_name": "StillRoom",
   "description": "켜두고 공부하는 파스텔 공부방",
   "start_url": "/",
   "display": "standalone",

@@ -3,7 +3,7 @@
 Instructions for coding agents (Claude Code, Codex) working in this repo.
 
 ## Project
-Piece Room (조각방): a personal pastel study-room PWA for one user, on one laptop. Timer → random pieces by time of day → unlock themes → decorate the room. Local-only (IndexedDB), no backend, no accounts.
+StillRoom: a personal pastel study-room PWA for one user, on one laptop. Timer → random pieces by time of day → unlock themes → decorate the room. Local-only (IndexedDB), no backend, no accounts.
 
 Read `SPEC.md` before changing anything. §1.3 (principles), §2.4 (game rules), and §4 (design) are the source of truth.
 
