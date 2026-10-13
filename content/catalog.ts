@@ -102,7 +102,7 @@ export const THEMES = [
 export type ThemeId = (typeof THEMES)[number]["id"];
 export type Theme = (typeof THEMES)[number];
 
-export type WindowView = "tower" | "garden" | "sea";
+export type WindowView = "hills" | "garden" | "sea";
 type ItemDef = { id: string; themeId: ThemeId; slot: Slot; nameKo: string; view?: WindowView };
 
 export const ITEMS = [

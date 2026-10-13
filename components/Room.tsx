@@ -1,10 +1,11 @@
 "use client";
-import { memo, useId } from "react";
+import { memo, useId, type ReactNode } from "react";
 import { ITEM_BY_ID, type ItemId, type SkyPhase, type Slot, type WindowView } from "../content/catalog";
 import { ITEM_ART, ITEM_GLOWS } from "./art/items";
 
 // Stage is 1440x900. preserveAspectRatio="slice" crops the side walls on narrow windows,
-// never the window or the desk (SPEC §4.3).
+// never the window or the desk (SPEC §4.3). Inside `.room` the art palette maps to paper whites
+// (globals.css); color comes only from the sky, window light, shade, and lamp glows.
 const v = (name: string) => `var(--c-${name})`;
 
 export const SLOT_RECTS: Record<Slot, [number, number, number, number]> = {
@@ -15,6 +16,9 @@ export const SLOT_RECTS: Record<Slot, [number, number, number, number]> = {
   desk: [280, 450, 280, 160],
   floor: [0, 720, 1440, 180],
 };
+
+// Light shaft from the window glass, falling diagonally down-right to the floor.
+const WINDOW_LIGHT = "M522 118 L918 118 L1348 900 L752 900 L522 482 Z";
 
 type Props = {
   room: Partial<Record<Slot, ItemId>>;
@@ -32,16 +36,22 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
     return id && ITEM_BY_ID[id] ? id : undefined;
   };
   const windowItem = item("window");
-  const view: WindowView = (windowItem && (ITEM_BY_ID[windowItem] as { view?: WindowView }).view) || "tower";
+  const view: WindowView = (windowItem && (ITEM_BY_ID[windowItem] as { view?: WindowView }).view) || "hills";
   const glows = [{ cx: 1118, cy: 520, r: 300 }, ...(["lighting", "desk"] as const).flatMap((s) => ITEM_GLOWS[item(s) ?? ""] ?? [])];
   const Art = (slot: Slot) => {
     const id = item(slot);
     const C = id ? ITEM_ART[id] : null;
     return C ? <C /> : null;
   };
+  const pencil = `url(#pencil${uid})`;
 
   return (
-    <svg viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" className={className} aria-hidden={onSlot ? undefined : true}>
+    <svg
+      viewBox="0 0 1440 900"
+      preserveAspectRatio="xMidYMid slice"
+      className={`room ${className ?? ""}`}
+      aria-hidden={onSlot ? undefined : true}
+    >
       <defs>
         <linearGradient id={`sky${uid}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" style={{ stopColor: "var(--sky-top)" }} />
@@ -51,20 +61,30 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
           <stop offset="0" style={{ stopColor: "var(--c-glow)", stopOpacity: 0.7 }} />
           <stop offset="1" style={{ stopColor: "var(--c-glow)", stopOpacity: 0 }} />
         </radialGradient>
-        {[1, 2, 3].map((n) => (
-          <radialGradient key={n} id={`prism${n}${uid}`}>
-            <stop offset="0" style={{ stopColor: `var(--prism-${n})`, stopOpacity: 0.95 }} />
-            <stop offset="0.5" style={{ stopColor: `var(--prism-${n})`, stopOpacity: 0.45 }} />
-            <stop offset="1" style={{ stopColor: `var(--prism-${n})`, stopOpacity: 0 }} />
-          </radialGradient>
-        ))}
+        {/* window light fades from the glass to the floor */}
+        <linearGradient id={`light${uid}`} gradientUnits="userSpaceOnUse" x1="720" y1="118" x2="1050" y2="900">
+          <stop offset="0" style={{ stopColor: "var(--light)", stopOpacity: 1 }} />
+          <stop offset="1" style={{ stopColor: "var(--light)", stopOpacity: 0.45 }} />
+        </linearGradient>
+        {/* colored-pencil lines: a slow wobble plus grain punched into the strokes */}
+        <filter id={`pencil${uid}`} filterUnits="userSpaceOnUse" x="0" y="0" width="1440" height="900">
+          <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="4" result="warp" />
+          <feDisplacementMap in="SourceGraphic" in2="warp" scale="3" xChannelSelector="R" yChannelSelector="G" result="wobble" />
+          <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="1" seed="9" result="grain" />
+          <feColorMatrix in="grain" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -3 2.75" result="grainMask" />
+          <feComposite in="wobble" in2="grainMask" operator="in" />
+        </filter>
         <clipPath id={`glass${uid}`}>
           <rect x="522" y="118" width="396" height="364" rx="12" />
         </clipPath>
-        {/* lit area of the light beam: everything outside it gets the lofi shade */}
         <mask id={`shade${uid}`}>
           <rect width="1440" height="900" fill="white" />
-          <path d={BEAM} fill="black" />
+          <path d={WINDOW_LIGHT} fill="black" />
+        </mask>
+        {/* window light paints the room, not the glass (the sky already carries its color) */}
+        <mask id={`light-mask${uid}`}>
+          <path d={WINDOW_LIGHT} fill="white" />
+          <rect x="522" y="118" width="396" height="364" rx="12" fill="black" />
         </mask>
         <mask id={`moon${uid}`}>
           <circle cx="620" cy="190" r="30" fill="white" />
@@ -72,82 +92,76 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
         </mask>
       </defs>
 
-      {/* wall + floor: near-white ivory */}
+      {/* wall + floor: paper white */}
       <rect width="1440" height="720" fill={v("wall")} />
-      <rect y="706" width="1440" height="16" fill={v("cream")} />
       <rect y="720" width="1440" height="180" fill={v("floor")} />
-      {[770, 820, 870].map((y) => (
-        <rect key={y} y={y} width="1440" height="2" fill={v("floor-d")} opacity="0.35" />
-      ))}
+      <ellipse cx="720" cy="892" rx="560" ry="24" style={{ fill: "var(--shade)", opacity: 0.18, mixBlendMode: "multiply" }} />
 
-      {/* prism backdrop: soft pastel light blooms sweeping diagonally, behind all furniture (SPEC §4.3) */}
-      <g aria-hidden>
-        <ellipse cx="360" cy="560" rx="640" ry="300" transform="rotate(-28 360 560)" fill={`url(#prism1${uid})`} />
-        <ellipse cx="1130" cy="290" rx="540" ry="260" transform="rotate(-28 1130 290)" fill={`url(#prism2${uid})`} />
-        <ellipse cx="780" cy="830" rx="720" ry="170" transform="rotate(-6 780 830)" fill={`url(#prism3${uid})`} />
+      {/* window view: outlined too, clipped to the glass */}
+      <g clipPath={`url(#glass${uid})`}>
+        {/* the sky itself stays smooth; pencil grain on a large flat fill reads as TV static */}
+        <rect x="522" y="118" width="396" height="364" fill={`url(#sky${uid})`} />
+        <g className="lineart" filter={pencil}>
+          <Sky phase={phase} uid={uid} />
+          <View view={view} />
+        </g>
       </g>
 
-      {/* sky and view stay outline-free */}
-      <g clipPath={`url(#glass${uid})`}>
-        <rect x="522" y="118" width="396" height="364" fill={`url(#sky${uid})`} />
-        <Sky phase={phase} uid={uid} />
-        <View view={view} />
+      {/* the room: every opaque shape gets a colored-pencil outline (globals.css .lineart) */}
+      <g className="lineart" filter={pencil}>
+        <rect y="706" width="1440" height="16" fill={v("cream")} />
+        {[770, 820, 870].map((y) => (
+          <rect key={y} y={y} width="1440" height="2" fill={v("floor-d")} opacity="0.5" />
+        ))}
+
+        {/* window frame: a ring so the glass stays open */}
+        <path
+          d="M522 96h396a22 22 0 0 1 22 22v364a22 22 0 0 1-22 22H522a22 22 0 0 1-22-22V118a22 22 0 0 1 22-22Z M534 118a12 12 0 0 0-12 12v340a12 12 0 0 0 12 12h372a12 12 0 0 0 12-12V130a12 12 0 0 0-12-12Z"
+          fillRule="evenodd"
+          fill={v("white")}
+        />
+        <rect x="715" y="118" width="10" height="364" fill={v("white")} />
+        <rect x="522" y="295" width="396" height="10" fill={v("white")} />
+        <rect x="480" y="496" width="480" height="22" rx="10" fill={v("cream")} />
+        {Art("window")}
+
+        <rect x="100" y="330" width="300" height="16" rx="6" fill={v("wood")} />
+        <path d="M140 346h22l-22 26Z M338 346h22v26Z" fill={v("wood-d")} />
+        {Art("shelf")}
+
+        {Art("wall")}
+        {Art("lighting")}
+        <FloorPlant />
+        {Art("floor")}
+
+        <rect x="250" y="676" width="28" height="224" fill={v("desk-d")} />
+        <rect x="1162" y="676" width="28" height="224" fill={v("desk-d")} />
+        <rect x="226" y="624" width="988" height="54" rx="6" fill={v("desk-d")} />
+        <rect x="640" y="646" width="160" height="10" rx="5" fill={v("desk")} />
+        <rect x="200" y="600" width="1040" height="28" rx="10" fill={v("desk")} />
+
+        <rect x="610" y="584" width="190" height="16" rx="4" fill={v("lav")} />
+        <rect x="622" y="570" width="170" height="14" rx="4" fill={v("cream")} />
+        <rect x="866" y="548" width="7" height="44" rx="3" fill={v("yellow-d")} transform="rotate(-10 869 570)" />
+        <rect x="880" y="540" width="7" height="50" rx="3" fill={v("blue-d")} transform="rotate(6 883 565)" />
+        <rect x="854" y="560" width="46" height="40" rx="10" fill={v("mint")} />
+        <ellipse cx="1100" cy="597" rx="46" ry="8" fill={v("mint-d")} />
+        {/* lamp arm: a white tube with a pencil outline */}
+        <path d="M1100 596 L1072 506 L1118 450" stroke="var(--line-art)" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <path d="M1100 596 L1072 506 L1118 450" stroke={v("white")} strokeWidth="7.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        <path d="M1092 414h52l26 58h-104Z" fill={v("mint")} />
+        <ellipse cx="1118" cy="472" rx="20" ry="6" fill={v("yellow")} />
+        {Art("desk")}
       </g>
 
       <LeafShadow />
 
-      {/* everything below gets lofi outlines (globals.css .lineart) */}
-      <g className="lineart">
-      {/* window frame: drawn as a ring so the glass stays open */}
-      <path d="M522 96h396a22 22 0 0 1 22 22v364a22 22 0 0 1-22 22H522a22 22 0 0 1-22-22V118a22 22 0 0 1 22-22Z M534 118a12 12 0 0 0-12 12v340a12 12 0 0 0 12 12h372a12 12 0 0 0 12-12V130a12 12 0 0 0-12-12Z" fillRule="evenodd" fill={v("white")} />
-      <rect x="715" y="118" width="10" height="364" fill={v("white")} />
-      <rect x="522" y="295" width="396" height="10" fill={v("white")} />
-      <rect x="480" y="496" width="480" height="22" rx="10" fill={v("cream")} />
-      {Art("window")}
+      {/* light and shadow carry all the color (SPEC §4.3) */}
+      <rect width="1440" height="900" mask={`url(#shade${uid})`} style={{ fill: "var(--shade)", opacity: "var(--shade-opacity)", mixBlendMode: "multiply" }} />
+      {/* mask each layer, not a group: a masked group is isolated and would stop the blend modes reaching the room */}
+      <path d={WINDOW_LIGHT} mask={`url(#light-mask${uid})`} fill={`url(#light${uid})`} style={{ opacity: "var(--light-wash)", mixBlendMode: "multiply" }} />
+      <path d={WINDOW_LIGHT} mask={`url(#light-mask${uid})`} fill={`url(#light${uid})`} style={{ opacity: 0.85, mixBlendMode: "overlay" }} />
 
-      {/* shelf */}
-      <rect x="100" y="330" width="300" height="16" rx="6" fill={v("wood")} />
-      <path d="M140 346h22l-22 26Z M338 346h22v26Z" fill={v("wood-d")} />
-      {Art("shelf")}
-
-      {Art("wall")}
-      {Art("lighting")}
-      <FloorPlant />
-      {Art("floor")}
-
-      {/* ground shadow under the desk */}
-      <ellipse cx="720" cy="892" rx="560" ry="24" style={{ fill: "var(--shade)", opacity: 0.22, mixBlendMode: "multiply" }} />
-
-      {/* desk */}
-      <rect x="250" y="676" width="28" height="224" fill={v("desk-d")} />
-      <rect x="1162" y="676" width="28" height="224" fill={v("desk-d")} />
-      <rect x="226" y="624" width="988" height="54" rx="6" fill={v("desk-d")} />
-      <rect x="640" y="646" width="160" height="10" rx="5" fill={v("desk")} />
-      <rect x="200" y="600" width="1040" height="28" rx="10" fill={v("desk")} />
-
-      {/* base desk objects: notebooks, pencil cup, lamp */}
-      <rect x="610" y="584" width="190" height="16" rx="4" fill={v("lav")} />
-      <rect x="622" y="570" width="170" height="14" rx="4" fill={v("cream")} />
-      <rect x="622" y="570" width="12" height="14" fill={v("pink")} />
-      <rect x="866" y="548" width="7" height="44" rx="3" fill={v("yellow-d")} transform="rotate(-10 869 570)" />
-      <rect x="880" y="540" width="7" height="50" rx="3" fill={v("blue-d")} transform="rotate(6 883 565)" />
-      <rect x="854" y="560" width="46" height="40" rx="10" fill={v("mint")} />
-      <ellipse cx="1100" cy="597" rx="46" ry="8" fill={v("mint-d")} />
-      <path d="M1100 596 L1072 506 L1118 450" stroke={v("mint-d")} strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      <path d="M1092 414h52l26 58h-104Z" fill={v("mint")} />
-      <ellipse cx="1118" cy="472" rx="20" ry="6" fill={v("yellow")} />
-      {Art("desk")}
-      </g>
-
-      {/* light beam: shade everything outside it */}
-      <rect
-        width="1440"
-        height="900"
-        mask={`url(#shade${uid})`}
-        style={{ fill: "var(--shade)", opacity: "var(--shade-opacity)", mixBlendMode: "multiply" }}
-      />
-
-      {/* time-of-day tint, then lamp glows on top */}
       <rect width="1440" height="900" style={{ fill: "var(--tint)", opacity: "var(--tint-opacity)", mixBlendMode: "multiply" }} />
       {glows.map((g, i) => (
         <circle key={i} cx={g.cx} cy={g.cy} r={g.r} fill={`url(#glow${uid})`} style={{ opacity: "var(--glow)", mixBlendMode: "screen" }} />
@@ -182,18 +196,28 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
 
 export const Room = memo(RoomScene);
 
-// Diagonal sunbeam from the upper right, falling across the right wall and floor (lofi reference).
-const BEAM = "M1440 40 L760 470 L520 900 L1440 900 Z";
+/**
+ * Outlines a shape built from overlapping primitives once around its silhouette:
+ * a thick stroked copy underneath, the same shapes unstroked on top (globals.css .merge-*).
+ */
+function Merged({ children }: { children: ReactNode }) {
+  return (
+    <>
+      <g className="merge-under">{children}</g>
+      <g className="merge-top">{children}</g>
+    </>
+  );
+}
 
-/** Soft palm-leaf shadow on the lit upper-right wall. Translucent, so it gets no outline. */
+/** Palm-leaf shadow cast across the lit floor by a plant just off the right edge. */
 function LeafShadow() {
   const fronds = [
-    { x: 1450, y: 110, a: 196, len: 300 },
-    { x: 1450, y: 240, a: 170, len: 280 },
-    { x: 1450, y: 380, a: 148, len: 220 },
+    { x: 1460, y: 880, a: 200, len: 300 },
+    { x: 1470, y: 790, a: 188, len: 260 },
+    { x: 1430, y: 960, a: 222, len: 250 },
   ];
   return (
-    <g opacity="0.15" style={{ mixBlendMode: "multiply" }} aria-hidden>
+    <g opacity="0.18" style={{ mixBlendMode: "multiply" }} aria-hidden>
       {fronds.map((f, i) => {
         const dir = (f.a * Math.PI) / 180;
         const tip = [f.x + Math.cos(dir) * f.len, f.y + Math.sin(dir) * f.len];
@@ -220,23 +244,27 @@ function LeafShadow() {
 
 /** Tall leafy floor plant at the left wall: base decor, always present. */
 function FloorPlant() {
-  const leaves: [number, number, number, string][] = [
-    [96, 560, -35, "green-d"],
-    [150, 540, 30, "green"],
-    [70, 640, -60, "green"],
-    [168, 630, 55, "green-d"],
-    [120, 600, 0, "green"],
+  const leaves: [number, number, number][] = [
+    [96, 560, -35],
+    [150, 540, 30],
+    [70, 640, -60],
+    [168, 630, 55],
+    [120, 600, 0],
   ];
   return (
     <g>
-      <path d="M120 800 C118 720 112 660 100 590 M122 800 C128 720 140 660 150 560" stroke={v("green-d")} strokeWidth="5" fill="none" strokeLinecap="round" />
-      {leaves.map(([x, y, a, c], i) => (
-        <path
-          key={i}
-          transform={`translate(${x} ${y}) rotate(${a})`}
-          d="M0 -48 C30 -40 38 -6 0 40 C-38 -6 -30 -40 0 -48 Z"
-          fill={v(c)}
-        />
+      <path
+        d="M120 800 C118 720 112 660 100 590 M122 800 C128 720 140 660 150 560"
+        stroke="var(--line-art)"
+        strokeWidth="3"
+        fill="none"
+        strokeLinecap="round"
+      />
+      {leaves.map(([x, y, a], i) => (
+        <g key={i} transform={`translate(${x} ${y}) rotate(${a})`}>
+          <path d="M0 -48 C30 -40 38 -6 0 40 C-38 -6 -30 -40 0 -48 Z" fill={v("green")} />
+          <path d="M0 -40 L0 32" stroke="var(--line-art)" strokeWidth="1.5" fill="none" />
+        </g>
       ))}
       <path d="M78 790h88l-10 92h-68Z" fill={v("cream")} />
       <rect x="72" y="782" width="100" height="16" rx="8" fill={v("peach")} />
@@ -249,38 +277,33 @@ const STARS: [number, number, number][] = [
   [880, 230, 2.2], [650, 330, 1.6], [860, 330, 2], [560, 380, 1.4], [900, 170, 1.4],
 ];
 
+/** Sun and moon are the light source, so the sun takes the phase's light color. */
 function Sky({ phase, uid }: { phase: SkyPhase; uid: string }) {
   const stars = phase === "night" || phase === "predawn" || phase === "twilight";
+  const sun = { fill: "var(--light)" };
   return (
     <g>
       {stars &&
-        STARS.map(([x, y, r], i) => (
-          <circle key={i} cx={x} cy={y} r={r} fill={v("white")} opacity={phase === "twilight" ? 0.5 : 0.9} />
-        ))}
-      {phase === "night" && <circle cx="620" cy="190" r="30" fill={v("yellow")} mask={`url(#moon${uid})`} />}
-      {phase === "dawn" && (
-        <>
-          <circle cx="610" cy="450" r="50" fill={v("peach")} opacity="0.9" />
-          <circle cx="610" cy="450" r="32" fill={v("yellow")} />
-        </>
-      )}
-      {phase === "morning" && <circle cx="620" cy="230" r="34" fill={v("yellow")} />}
-      {phase === "midday" && <circle cx="885" cy="230" r="28" fill={v("cream")} />}
-      {phase === "afternoon" && <circle cx="600" cy="280" r="36" fill={v("yellow-d")} opacity="0.85" />}
-      {phase === "evening" && <circle cx="640" cy="400" r="58" fill={v("coral")} />}
+        STARS.map(([x, y, r], i) => <circle key={i} cx={x} cy={y} r={r} fill={v("white")} opacity={phase === "twilight" ? 0.5 : 0.9} />)}
+      {phase === "night" && <circle cx="620" cy="190" r="30" fill={v("white")} mask={`url(#moon${uid})`} />}
+      {phase === "dawn" && <circle cx="610" cy="430" r="40" style={sun} />}
+      {phase === "morning" && <circle cx="620" cy="250" r="34" style={sun} />}
+      {phase === "midday" && <circle cx="885" cy="230" r="28" style={sun} />}
+      {phase === "afternoon" && <circle cx="600" cy="280" r="36" style={sun} />}
+      {phase === "evening" && <circle cx="640" cy="390" r="54" style={sun} />}
       {phase === "twilight" && <ellipse cx="720" cy="470" rx="220" ry="40" fill={v("pink")} opacity="0.5" />}
-      {(phase === "morning" || phase === "midday" || phase === "afternoon") && (
-        <g className="anim-drift" fill={v("white")} opacity="0.9">
+      {phase !== "night" && phase !== "predawn" && (
+        <Merged>
           <SkyCloud x={610} y={170} s={0.9} />
-          <SkyCloud x={880} y={330} s={0.6} />
-        </g>
+          <SkyCloud x={860} y={320} s={0.6} />
+        </Merged>
       )}
     </g>
   );
 }
 
 const SkyCloud = ({ x, y, s }: { x: number; y: number; s: number }) => (
-  <g transform={`translate(${x} ${y}) scale(${s})`}>
+  <g transform={`translate(${x} ${y}) scale(${s})`} fill={v("white")}>
     <circle cx="-30" cy="6" r="22" />
     <circle cx="4" cy="-8" r="30" />
     <circle cx="36" cy="8" r="20" />
@@ -288,35 +311,27 @@ const SkyCloud = ({ x, y, s }: { x: number; y: number; s: number }) => (
   </g>
 );
 
-/** Distant ivory tower rising from a sea of clouds. Low-poly faces + pixel squares. */
-function Tower({ x, scale = 1 }: { x: number; scale?: number }) {
+/** Rolling hills over a sea of clouds: the default view. */
+function Hills() {
   return (
-    <g transform={`translate(${x} 480) scale(${scale})`}>
-      <path d="M-34 0 L-20 -270 L0 -270 L0 0Z" fill={v("tower")} />
-      <path d="M0 0 L0 -270 L20 -270 L34 0Z" fill={v("tower-d")} />
-      <path d="M-26 -270 L0 -330 L0 -270Z" fill={v("lav")} />
-      <path d="M0 -330 L26 -270 L0 -270Z" fill={v("lav-d")} />
-      <rect x="-28" y="-276" width="56" height="8" fill={v("tower-d")} />
-      {[-230, -180, -130, -80].map((y) => (
-        <rect key={y} x="-10" y={y} width="7" height="10" fill={v("lav-d")} opacity="0.7" />
-      ))}
-      {[[-24, -40], [-18, -150], [8, -100], [12, -210], [-14, -240]].map(([px, py], i) => (
-        <rect key={i} x={px} y={py} width="6" height="6" fill={v("tower-d")} opacity="0.8" />
-      ))}
-    </g>
+    <>
+      <path d="M500 420 C580 360 660 360 740 404 C800 378 880 370 950 400 V500 H500 Z" fill={v("white")} />
+      <path d="M500 452 C600 420 700 430 780 454 C840 440 900 440 950 452 V500 H500 Z" fill={v("cream")} />
+      <CloudSea y={462} />
+    </>
   );
 }
 
 function CloudSea({ y }: { y: number }) {
   return (
-    <g fill={v("white")}>
-      <g className="anim-drift" opacity="0.75">
+    <Merged>
+      <g fill={v("white")}>
         {[530, 600, 680, 760, 840, 910].map((x, i) => (
-          <circle key={x} cx={x} cy={y + (i % 2) * 10} r={38 + (i % 3) * 8} />
+          <circle key={x} cx={x} cy={y + (i % 2) * 8} r={28 + (i % 3) * 6} />
         ))}
+        <rect x="500" y={y + 10} width="440" height="60" />
       </g>
-      <rect x="500" y={y + 20} width="440" height="80" />
-    </g>
+    </Merged>
   );
 }
 
@@ -324,14 +339,17 @@ function View({ view }: { view: WindowView }) {
   if (view === "garden") {
     return (
       <g>
-        <Tower x={820} scale={0.6} />
-        <CloudSea y={440} />
-        <rect x="500" y="430" width="440" height="60" rx="20" fill={v("green-d")} />
-        {[540, 600, 660, 760, 820, 880].map((x, i) => (
-          <circle key={x} cx={x} cy={428} r={30} fill={i % 2 ? v("green") : v("green-d")} />
-        ))}
-        {[[560, 420, "pink"], [640, 430, "yellow"], [790, 418, "pink"], [870, 432, "white"], [700, 440, "peach"]].map(([x, y, c], i) => (
-          <circle key={i} cx={x as number} cy={y as number} r="7" fill={v(c as string)} />
+        <Hills />
+        <Merged>
+          <g fill={v("white")}>
+            <rect x="500" y="430" width="440" height="60" rx="20" />
+            {[540, 600, 660, 760, 820, 880].map((x) => (
+              <circle key={x} cx={x} cy={428} r={30} />
+            ))}
+          </g>
+        </Merged>
+        {[[560, 420], [640, 430], [790, 418], [870, 432], [700, 440]].map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r="6" fill={v("cream")} />
         ))}
       </g>
     );
@@ -339,24 +357,19 @@ function View({ view }: { view: WindowView }) {
   if (view === "sea") {
     return (
       <g>
-        <Tower x={820} scale={0.55} />
-        <rect x="500" y="400" width="440" height="100" fill={v("blue-d")} opacity="0.75" />
+        {/* the sea reflects the sky, so it takes the sky color, not a paint color */}
+        <rect className="no-line" x="500" y="400" width="440" height="100" style={{ fill: "var(--sky-bottom)" }} />
+        <path d="M500 400 H950" stroke="var(--line-art)" strokeWidth="2" />
         {[420, 445, 470].map((y, i) => (
-          <rect key={y} x={540 + i * 40} y={y} width={120 - i * 20} height="4" rx="2" fill={v("white")} opacity="0.6" />
+          <path key={y} d={`M${540 + i * 40} ${y} h${120 - i * 20}`} stroke="var(--line-art)" strokeWidth="1.5" strokeLinecap="round" />
         ))}
         <path d="M590 404 L598 300 L622 300 L630 404Z" fill={v("white")} />
-        <rect x="594" y="330" width="32" height="14" fill={v("pink")} />
-        <rect x="592" y="368" width="36" height="14" fill={v("pink")} />
-        <rect x="594" y="284" width="32" height="18" fill={v("yellow")} />
-        <path d="M590 286 L610 264 L630 286Z" fill={v("lav-d")} />
+        <rect x="594" y="330" width="32" height="14" fill={v("pink-d")} />
+        <rect x="592" y="368" width="36" height="14" fill={v("pink-d")} />
+        <rect x="594" y="284" width="32" height="18" style={{ fill: "var(--light)" }} />
+        <path d="M590 286 L610 264 L630 286Z" fill={v("white")} />
       </g>
     );
   }
-  return (
-    <g>
-      <Tower x={810} />
-      <CloudSea y={430} />
-    </g>
-  );
+  return <Hills />;
 }
-

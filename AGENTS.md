@@ -23,7 +23,7 @@ npm run build        # static export to out/
 ```
 app/                 single page + globals.css (tokens, 8 sky phases)
 components/App.tsx   timer actions, ticking, shortcuts, ambient mode, wake lock
-components/Room.tsx  room scene, slots, window view (ivory tower)
+components/Room.tsx  room scene, slots, window view, window light, line-art group
 components/Hud.tsx   window chip, timer pill, controls, menu, toasts
 components/Panels.tsx pieces, themes, decorate, records
 components/art/      original SVG art: one component per piece and room item

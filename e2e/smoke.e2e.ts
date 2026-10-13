@@ -30,6 +30,21 @@ test("study, earn pieces, unlock a theme, persist across reload", async ({ page 
   await garden.getByRole("button", { name: "열기" }).click();
   await expect(garden.getByRole("button", { name: "방에 통째로 적용" })).toBeVisible();
 
+  // Saving is async (IndexedDB); wait for the write before reloading.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          new Promise<string[]>((resolve) => {
+            const req = indexedDB.open("keyval-store");
+            req.onsuccess = () => {
+              const get = req.result.transaction("keyval").objectStore("keyval").get("state");
+              get.onsuccess = () => resolve(get.result?.unlockedThemes ?? []);
+            };
+          }),
+      ),
+    )
+    .toContain("dawn-garden");
   await page.reload();
   await page.keyboard.press("2");
   await expect(page.getByRole("article").filter({ hasText: "새벽 정원" }).getByText("열림")).toBeVisible();
