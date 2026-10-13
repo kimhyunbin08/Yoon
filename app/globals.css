@@ -1,0 +1,164 @@
+@import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
+@import "tailwindcss";
+
+/* Registered so the sky and room tint cross-fade when the phase changes. */
+@property --sky-top { syntax: "<color>"; inherits: true; initial-value: #cfe8fb; }
+@property --sky-bottom { syntax: "<color>"; inherits: true; initial-value: #f4fbff; }
+@property --tint { syntax: "<color>"; inherits: true; initial-value: #ffffff; }
+@property --tint-opacity { syntax: "<number>"; inherits: true; initial-value: 0; }
+@property --glow { syntax: "<number>"; inherits: true; initial-value: 0; }
+
+:root {
+  /* UI tokens (SPEC §4.2) */
+  --bg: #fbf7f2;
+  --surface: rgb(255 255 255 / 0.85);
+  --surface-solid: #ffffff;
+  --text: #3b3a45;
+  --text-muted: #8a8797;
+  --primary: #b9a7e8;
+  --accent-pink: #f6c1cf;
+  --accent-mint: #bde5d3;
+  --accent-peach: #ffd6b8;
+  --rare: #9ec5f2;
+  --special: #f2c97e;
+  --line: rgb(59 58 69 / 0.08);
+  --silhouette: brightness(0);
+
+  /* Art palette: every SVG fill goes through these. */
+  --c-white: #ffffff;
+  --c-cream: #fff8ee;
+  --c-wall: #f4e9e1;
+  --c-wall-d: #e8d8cd;
+  --c-floor: #e7c9a9;
+  --c-floor-d: #d6b18c;
+  --c-desk: #f1d3b3;
+  --c-desk-d: #dcb38c;
+  --c-wood: #d9ad86;
+  --c-wood-d: #b98d69;
+  --c-pink: #f6c1cf;
+  --c-pink-d: #e8a1b5;
+  --c-mint: #bde5d3;
+  --c-mint-d: #93cdb3;
+  --c-peach: #ffd6b8;
+  --c-peach-d: #f3b48b;
+  --c-lav: #cbbef0;
+  --c-lav-d: #a898de;
+  --c-yellow: #fbe7a1;
+  --c-yellow-d: #f0cd68;
+  --c-blue: #c4dcf5;
+  --c-blue-d: #93bbe5;
+  --c-green: #b3dca6;
+  --c-green-d: #86c27a;
+  --c-coral: #f7a99c;
+  --c-cat: #f5cfa3;
+  --c-ink: #4a4857;
+  --c-tower: #f7f1ff;
+  --c-tower-d: #d9cfee;
+  --c-glow: #ffe6a8;
+
+  --sky-top: color-mix(in oklab, #87ceeb 60%, white);
+  --sky-bottom: #f0f8ff;
+  --tint: #ffffff;
+  --tint-opacity: 0;
+  --glow: 0;
+
+  transition: --sky-top 2s ease, --sky-bottom 2s ease, --tint 2s ease, --tint-opacity 2s ease, --glow 2s ease;
+}
+
+/* Night window (21–05): UI switches to dark tokens. */
+:root[data-window="night"] {
+  --bg: #1e2033;
+  --surface: rgb(42 45 69 / 0.85);
+  --surface-solid: #2a2d45;
+  --text: #eceaf5;
+  --text-muted: #a6a3b8;
+  --primary: #c8b9f0;
+  --accent-pink: #e8a9ba;
+  --accent-mint: #9fd1bc;
+  --accent-peach: #e9bb98;
+  --line: rgb(236 234 245 / 0.1);
+  --silhouette: brightness(0) invert(1);
+}
+
+/* Eight sky phases. Source palette from the mood board, softened toward white/lavender to stay pastel. */
+:root[data-sky="predawn"] { --sky-top: color-mix(in oklab, #708090 75%, #b9a7e8); --sky-bottom: color-mix(in oklab, #4b0082 45%, #b9a7e8); --tint: #9a96c4; --tint-opacity: 0.3; --glow: 0.7; }
+:root[data-sky="dawn"] { --sky-top: #e6e6fa; --sky-bottom: #ffd1dc; --tint: #ffd9d0; --tint-opacity: 0.1; --glow: 0.25; }
+:root[data-sky="morning"] { --sky-top: color-mix(in oklab, #87ceeb 60%, white); --sky-bottom: #f0f8ff; --tint: #ffffff; --tint-opacity: 0; --glow: 0; }
+:root[data-sky="midday"] { --sky-top: color-mix(in oklab, #00bfff 55%, white); --sky-bottom: #ffffff; --tint: #ffffff; --tint-opacity: 0; --glow: 0; }
+:root[data-sky="afternoon"] { --sky-top: color-mix(in oklab, #ffd700 45%, white); --sky-bottom: #f5f5dc; --tint: #ffe9b0; --tint-opacity: 0.1; --glow: 0.1; }
+:root[data-sky="evening"] { --sky-top: color-mix(in oklab, #ffa500 55%, white); --sky-bottom: color-mix(in oklab, #ff7f50 65%, white); --tint: #f7a889; --tint-opacity: 0.18; --glow: 0.5; }
+:root[data-sky="twilight"] { --sky-top: color-mix(in oklab, #4b0082 70%, #b9a7e8); --sky-bottom: color-mix(in oklab, #ff00ff 45%, white); --tint: #9b7fc9; --tint-opacity: 0.32; --glow: 0.75; }
+:root[data-sky="night"] { --sky-top: color-mix(in oklab, #191970 85%, #b9a7e8); --sky-bottom: color-mix(in oklab, #000080 70%, #b9a7e8); --tint: #5a5e9e; --tint-opacity: 0.38; --glow: 0.85; }
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-solid: var(--surface-solid);
+  --color-text: var(--text);
+  --color-muted: var(--text-muted);
+  --color-primary: var(--primary);
+  --color-pink: var(--accent-pink);
+  --color-mint: var(--accent-mint);
+  --color-peach: var(--accent-peach);
+  --color-rare: var(--rare);
+  --color-special: var(--special);
+  --color-line: var(--line);
+  --font-sans: "Pretendard Variable", Pretendard, system-ui, sans-serif;
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  overflow: hidden;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* Ambient mode: UI fades after idle, timer pill stays. */
+.ui-fade {
+  transition: opacity 0.6s ease;
+}
+:root[data-idle] .ui-fade {
+  opacity: 0;
+  pointer-events: none;
+}
+:root[data-idle] {
+  cursor: none;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+@keyframes flicker {
+  0%, 100% { transform: scale(1, 1); }
+  50% { transform: scale(0.94, 1.06); }
+}
+@keyframes steam {
+  0% { opacity: 0; transform: translateY(6px); }
+  50% { opacity: 0.8; }
+  100% { opacity: 0; transform: translateY(-10px); }
+}
+@keyframes drift {
+  from { transform: translateX(-20px); }
+  to { transform: translateX(20px); }
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: none; }
+}
+.anim-flicker { animation: flicker 4s ease-in-out infinite; transform-box: fill-box; transform-origin: 50% 100%; }
+.anim-steam { animation: steam 4s ease-in-out infinite; }
+.anim-drift { animation: drift 24s ease-in-out infinite alternate; }
+.anim-toast { animation: toast-in 0.3s ease-out; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-flicker, .anim-steam, .anim-drift { animation: none; }
+  :root { transition: none; }
+}

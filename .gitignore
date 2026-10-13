@@ -1,0 +1,13 @@
+node_modules/
+.next/
+out/
+next-env.d.ts
+*.tsbuildinfo
+playwright-report/
+test-results/
+.DS_Store
+.env*
+.vercel
+
+# Local-only notes (personal context, never published)
+*.private.md
