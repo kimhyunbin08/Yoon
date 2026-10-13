@@ -38,14 +38,20 @@ export default function App() {
 
   const announce = useCallback(
     (drops: game.Drop[], away = false) => {
-      if (drops.length > 2) {
+      // One toast per 5-minute drop; a catch-up of several drops collapses into one.
+      const groups = Map.groupBy(drops, (d) => d.at);
+      if (groups.size > 2) {
         toast(`${away ? "자리를 비운 동안 " : ""}조각 ${drops.length}개를 얻었어요`);
         return;
       }
-      for (const d of drops) {
-        const p = PIECE_BY_ID[d.pieceId];
-        const tag = d.rarity === "common" ? "" : ` (${RARITY_KO[d.rarity]})`;
-        toast(`${WINDOW_INFO[d.window].nameKo} 조각을 얻었어요 · ${p.nameKo}${tag}`, d.rarity === "common" ? undefined : d.rarity);
+      for (const group of groups.values()) {
+        const names = Map.groupBy(group, (d) => d.pieceId);
+        const list = [...names].map(([id, ds]) => {
+          const tag = ds[0].rarity === "common" ? "" : `(${RARITY_KO[ds[0].rarity]})`;
+          return `${PIECE_BY_ID[id].nameKo}${tag}${ds.length > 1 ? ` ×${ds.length}` : ""}`;
+        });
+        const tone = group.some((d) => d.rarity === "special") ? "special" : group.some((d) => d.rarity === "rare") ? "rare" : undefined;
+        toast(`${WINDOW_INFO[group[0].window].nameKo} 조각 ${group.length}개 · ${list.join(", ")}`, tone);
       }
     },
     [toast],
@@ -208,7 +214,7 @@ export default function App() {
         <>
           {status === "idle" && !hasPieces && (
             <p className="ui-fade absolute bottom-24 left-1/2 -translate-x-1/2 rounded-full bg-surface px-4 py-2 text-sm text-muted backdrop-blur">
-              5분마다 조각이 나올 기회가 와요
+              5분마다 조각이 1~5개 나와요
             </p>
           )}
           <Controls status={status} onStart={act.start} onPause={act.pause} onResume={act.resume} onEnd={act.end} onFullscreen={act.fullscreen} />

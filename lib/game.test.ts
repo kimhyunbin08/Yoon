@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PIECE_BY_ID } from "../content/catalog";
 import {
-  BLOCK_MS,
-  DRY_PITY,
   applyTheme,
   award,
   end,
@@ -11,6 +9,7 @@ import {
   migrate,
   nextWindowChange,
   pause,
+  pieceCount,
   place,
   resume,
   roll,
@@ -29,10 +28,8 @@ const cycle = (...values: number[]) => {
   let i = 0;
   return () => values[i++ % values.length];
 };
-// Every roll drops (0 < chance), common rarity, last piece in pool.
+// One piece per drop (count rng 0 → 1), common rarity, last piece in pool.
 const always = () => cycle(0, 0.99, 0.99);
-// Every roll misses unless dry pity forces a drop.
-const never = () => () => 0.99;
 
 describe("time windows", () => {
   it("maps hours to windows", () => {
@@ -123,21 +120,21 @@ describe("timer", () => {
 });
 
 describe("drops", () => {
-  it("misses sometimes, but never more than DRY_PITY rolls in a row", () => {
-    const s = start(initialState(), at(10));
-    const r = award(s, at(10) + 9 * BLOCK_MS, never());
-    // pattern: miss, miss, drop, repeated
-    expect(DRY_PITY).toBe(2);
-    expect(r.drops.map((d) => d.at)).toEqual([at(10, 15), at(10, 30), at(10, 45)]);
-    expect(r.state.rollsSinceDrop).toBe(0);
+  it("drops 1–5 pieces by weight, 3 in the middle band", () => {
+    expect([0, 0.15, 0.5, 0.75, 0.95, 0.9999].map((r) => pieceCount(() => r))).toEqual([1, 2, 3, 4, 5, 5]);
   });
 
-  it("keeps the dry streak across ticks", () => {
+  it("puts every piece of one drop at the same time and window", () => {
     const s = start(initialState(), at(10));
-    const a = award(s, at(10, 10), never());
-    expect(a.drops).toHaveLength(0);
-    expect(a.state.rollsSinceDrop).toBe(2);
-    expect(award(a.state, at(10, 15), never()).drops).toHaveLength(1);
+    const { drops } = award(s, at(10, 5), cycle(0.5, 0.99, 0.99)); // count 3
+    expect(drops).toHaveLength(3);
+    expect(new Set(drops.map((d) => d.at))).toEqual(new Set([at(10, 5)]));
+  });
+
+  it("never gives an empty 5 minutes", () => {
+    const s = start(initialState(), at(10));
+    const { drops } = award(s, at(11), () => 0.99);
+    expect(new Set(drops.map((d) => d.at)).size).toBe(12);
   });
 
   it("guarantees a rare after 8 commons", () => {
@@ -158,21 +155,21 @@ describe("drops", () => {
     expect(roll("night", 0, () => 0.2).rarity).toBe("rare");
   });
 
-  it("averages about 7 pieces an hour with real randomness", () => {
+  it("averages about 36 pieces an hour with real randomness", () => {
     let seed = 42;
     const rng = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
     const hours = 200;
     const r = award(start(initialState(), at(9)), at(9) + hours * 60 * MIN, rng);
     const perHour = r.drops.length / hours;
-    expect(perHour).toBeGreaterThan(7);
-    expect(perHour).toBeLessThan(8.5);
+    expect(perHour).toBeGreaterThan(35);
+    expect(perHour).toBeLessThan(37);
   });
 });
 
 describe("themes and room", () => {
   const rich = () => ({
     ...initialState(),
-    pieces: { dew: 6, sunbeam: 5, sprout: 7, feather: 2, "pink-cloud": 2 },
+    pieces: { dew: 30, sunbeam: 25, sprout: 31, feather: 10, "pink-cloud": 10 },
   });
 
   it("unlocks a theme and consumes pieces", () => {
@@ -218,11 +215,17 @@ describe("migrate", () => {
       room: {},
     };
     const s = migrate(v1);
-    expect(s.version).toBe(2);
+    expect(s.version).toBe(3);
     expect(s.timer.blocksAwarded).toBe(12);
-    expect(s.rollsSinceDrop).toBe(0);
     // 10 min carry + 60 min focused = 70 min = 14 rolls; 12 already paid as two v1 pieces.
     expect(award(s, at(11), always()).drops).toHaveLength(2);
+  });
+
+  it("drops v2's dry-pity counter", () => {
+    const v2 = { ...initialState(), version: 2, rollsSinceDrop: 1 };
+    const s = migrate(v2);
+    expect(s.version).toBe(3);
+    expect("rollsSinceDrop" in s).toBe(false);
   });
 
   it("spends idle carry once, so the next session cannot award it again", () => {
@@ -235,7 +238,7 @@ describe("migrate", () => {
 
   it("rejects junk", () => {
     expect(() => migrate(null)).toThrow("INVALID_STATE");
-    expect(() => migrate({ version: 3 })).toThrow("INVALID_STATE");
-    expect(() => migrate({ version: 2, pieces: [] })).toThrow("INVALID_STATE");
+    expect(() => migrate({ version: 4 })).toThrow("INVALID_STATE");
+    expect(() => migrate({ version: 3, pieces: [] })).toThrow("INVALID_STATE");
   });
 });

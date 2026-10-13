@@ -3,7 +3,7 @@
 Instructions for coding agents (Claude Code, Codex) working in this repo.
 
 ## Project
-StillRoom: a personal pastel study-room PWA for one user, on one laptop. Timer → a random roll every 5 focused minutes → pieces by time of day → unlock themes → decorate the room. Local-only (IndexedDB), no backend, no accounts.
+StillRoom: a personal pastel study-room PWA for one user, on one laptop. Timer → 1–5 random pieces every 5 focused minutes, by time of day → unlock themes → decorate the room. Local-only (IndexedDB), no backend, no accounts.
 
 Live: https://stillroom-app.vercel.app (Vercel project `jogakbang`, team Meditor). Every push to `main` deploys to production.
 

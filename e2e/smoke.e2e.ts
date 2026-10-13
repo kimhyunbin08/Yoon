@@ -6,7 +6,7 @@ test("study, earn pieces, unlock a theme, persist across reload", async ({ page 
   await page.goto("/");
 
   await page.getByRole("button", { name: "공부 시작" }).click();
-  // 15 minutes = 3 rolls; dry pity guarantees at least one piece.
+  // 15 minutes = 3 drops of 1–5 pieces each.
   await page.clock.fastForward("15:05");
   await expect(page.getByText(/조각.*얻었어요/).first()).toBeVisible();
   // Ambient mode hid the controls while idle; moving the mouse brings them back.
@@ -15,7 +15,7 @@ test("study, earn pieces, unlock a theme, persist across reload", async ({ page 
 
   // Load enough pieces through the backup import to unlock a theme.
   await page.keyboard.press("4");
-  const backup = { ...initialState(), pieces: { dew: 6, sunbeam: 5, sprout: 6, feather: 2, "pink-cloud": 2 } };
+  const backup = { ...initialState(), pieces: { dew: 30, sunbeam: 25, sprout: 30, feather: 10, "pink-cloud": 10 } };
   await page.getByTestId("backup-input").setInputFiles({ name: "b.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(backup)) });
   await page.getByRole("button", { name: "바꾸기" }).click();
   await page.keyboard.press("Escape");

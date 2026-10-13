@@ -16,9 +16,8 @@ import {
   type TimeWindow,
 } from "../content/catalog";
 
-export const BLOCK_MS = 5 * 60_000; // one drop roll per 5 focused minutes
-export const DROP_CHANCE = 0.6; // chance a roll yields a piece
-export const DRY_PITY = 2; // empty rolls in a row before a guaranteed piece (max wait 15 min)
+export const BLOCK_MS = 5 * 60_000; // one drop per 5 focused minutes
+export const COUNT_WEIGHTS = [0.1, 0.2, 0.4, 0.2, 0.1]; // P(1..5 pieces per drop), 3 most common
 export const PITY_AFTER = 8; // consecutive commons before a guaranteed rare
 export const ODDS = { special: 0.05, rare: 0.25 }; // common = remainder
 const V1_BLOCK_MS = 30 * 60_000;
@@ -26,13 +25,12 @@ const V1_BLOCK_MS = 30 * 60_000;
 export type Segment = { start: number; end: number | null };
 export type Timer = { segments: Segment[]; blocksAwarded: number };
 export type State = {
-  version: 2;
+  version: 3;
   timer: Timer;
   carryMs: number; // focused time left over from previous sessions, < BLOCK_MS
   daily: Record<string, number>; // local YYYY-MM-DD -> focused ms (closed segments only)
   pieces: Partial<Record<PieceId, number>>;
   rollsSinceRare: number;
-  rollsSinceDrop: number; // empty rolls in a row
   unlockedThemes: ThemeId[];
   room: Partial<Record<Slot, ItemId>>;
 };
@@ -42,13 +40,12 @@ type Result = { state: State; drops: Drop[] };
 
 export function initialState(): State {
   return {
-    version: 2,
+    version: 3,
     timer: { segments: [], blocksAwarded: 0 },
     carryMs: 0,
     daily: {},
     pieces: {},
     rollsSinceRare: 0,
-    rollsSinceDrop: 0,
     unlockedThemes: [],
     room: {},
   };
@@ -120,8 +117,8 @@ export function pendingBlocks(s: State, now: number): number {
   return Math.floor((s.carryMs + focusedMs(s.timer, now)) / BLOCK_MS) - s.timer.blocksAwarded;
 }
 
-/** Ms of focus until the next drop roll. */
-export function msToNextRoll(s: State, now: number): number {
+/** Ms of focus until the next drop. */
+export function msToNextDrop(s: State, now: number): number {
   const total = s.carryMs + focusedMs(s.timer, now);
   return BLOCK_MS - (total % BLOCK_MS);
 }
@@ -170,6 +167,16 @@ export function end(s: State, now: number, rng: Rng): Result {
 
 // ---------- drops ----------
 
+/** Number of pieces in one drop, 1..5, by COUNT_WEIGHTS. */
+export function pieceCount(rng: Rng): number {
+  let r = rng();
+  for (let i = 0; i < COUNT_WEIGHTS.length; i++) {
+    r -= COUNT_WEIGHTS[i];
+    if (r < 0) return i + 1;
+  }
+  return COUNT_WEIGHTS.length;
+}
+
 export function roll(window: TimeWindow, rollsSinceRare: number, rng: Rng) {
   const r = rng();
   let rarity: Rarity = r < ODDS.special ? "special" : r < ODDS.special + ODDS.rare ? "rare" : "common";
@@ -179,33 +186,28 @@ export function roll(window: TimeWindow, rollsSinceRare: number, rng: Rng) {
   return { pieceId: piece.id as PieceId, rarity, rollsSinceRare: rarity === "common" ? rollsSinceRare + 1 : 0 };
 }
 
-/** Rolls once per completed block, each in the time window where it completed. */
+/** One drop of 1–5 pieces per completed block, each in the time window where it completed. */
 export function award(s: State, now: number, rng: Rng): Result {
   const n = pendingBlocks(s, now);
   if (n <= 0) return { state: s, drops: [] };
   const pieces = { ...s.pieces };
   let since = s.rollsSinceRare;
-  let dry = s.rollsSinceDrop;
   const drops: Drop[] = [];
   for (let i = 1; i <= n; i++) {
-    if (dry < DRY_PITY && rng() >= DROP_CHANCE) {
-      dry++;
-      continue;
-    }
-    dry = 0;
     const at = blockCompletedAt(s, s.timer.blocksAwarded + i, now);
     const window = windowAt(at);
-    const r = roll(window, since, rng);
-    since = r.rollsSinceRare;
-    pieces[r.pieceId] = (pieces[r.pieceId] ?? 0) + 1;
-    drops.push({ pieceId: r.pieceId, rarity: r.rarity, window, at });
+    for (let c = pieceCount(rng); c > 0; c--) {
+      const r = roll(window, since, rng);
+      since = r.rollsSinceRare;
+      pieces[r.pieceId] = (pieces[r.pieceId] ?? 0) + 1;
+      drops.push({ pieceId: r.pieceId, rarity: r.rarity, window, at });
+    }
   }
   return {
     state: {
       ...s,
       pieces,
       rollsSinceRare: since,
-      rollsSinceDrop: dry,
       // Idle (only carried-over time): spend it from the carry so the next session can't award it again.
       ...(s.timer.segments.length === 0
         ? { carryMs: s.carryMs - n * BLOCK_MS }
@@ -264,19 +266,20 @@ const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object
 
 /** Validates stored or imported state and upgrades older versions. Throws INVALID_STATE. */
 export function migrate(raw: unknown): State {
-  if (!isObj(raw) || (raw.version !== 1 && raw.version !== 2)) throw new Error("INVALID_STATE");
+  if (!isObj(raw) || ![1, 2, 3].includes(raw.version as number)) throw new Error("INVALID_STATE");
   const base = initialState();
   const timer = { ...base.timer, ...(isObj(raw.timer) ? raw.timer : {}) } as Timer;
   // v1 counted 30-minute blocks; v2 counts 5-minute rolls.
   if (raw.version === 1 && typeof timer.blocksAwarded === "number") timer.blocksAwarded *= V1_BLOCK_MS / BLOCK_MS;
-  const s = { ...base, ...raw, version: 2, timer } as State;
+  const { rollsSinceDrop: _drop, ...rest } = raw; // v2-only field
+  void _drop;
+  const s = { ...base, ...rest, version: 3, timer } as State;
   const ok =
     Array.isArray(s.timer.segments) &&
     s.timer.segments.every((g) => isObj(g) && typeof g.start === "number" && (g.end === null || typeof g.end === "number")) &&
     typeof s.timer.blocksAwarded === "number" &&
     typeof s.carryMs === "number" &&
     typeof s.rollsSinceRare === "number" &&
-    typeof s.rollsSinceDrop === "number" &&
     isObj(s.daily) &&
     isObj(s.pieces) &&
     isObj(s.room) &&
