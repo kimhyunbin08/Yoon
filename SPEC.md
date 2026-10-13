@@ -1,7 +1,8 @@
 # StillRoom — Product Spec
 
 Source: user interview (2026-10).
-Status: v0.4 (implemented). Sections: 1 Ideation · 2 PRD · 3 TRD · 4 Design Spec · 5 Open Questions. Agent instructions live in `AGENTS.md`.
+Status: v0.5 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
+Sections: 1 Ideation · 2 PRD · 3 TRD · 4 Design Spec · 5 Open Questions · 6 Market Research & Decisions. Agent instructions live in `AGENTS.md`.
 
 Platform decision: **laptop only** (desktop browser, landscape). No phone, no tablet, no sync.
 
@@ -32,7 +33,7 @@ One user: a student who wants a cozy room on screen while studying. What the int
 ```
 Open room ─► Start timer, leave it running (window shows the time of day)
    ▲                                   │
-   │                                   ▼ every 30 min of timer time
+   │                                   ▼ a roll every 5 min of timer time
 Decorate room ◄─ Unlock theme ◄─ Random piece (set depends on time of day)
 ```
 
@@ -54,7 +55,7 @@ Accounts, sync, mobile/tablet layouts, social, rankings, payments, native apps, 
 |---|---|---|
 | US-1 | open the app and see her room | No login. Room renders full screen within 1 s from cached assets. Installable as a desktop PWA (Chrome/Edge; Safari via Add to Dock). |
 | US-2 | start / pause / stop a study timer | Timer survives reload and closing the tab (stored start timestamp). No upper limit. |
-| US-3 | get pieces for studying | 1 piece per 30 min of timer time, awarded live while running (small, quiet toast), not only at stop. Leftover minutes carry over to the next session. |
+| US-3 | get pieces for studying | A random roll every 5 min of timer time (60% chance of a piece, never more than 15 min without one), awarded live while running with a small, quiet toast. Empty rolls are silent. Leftover minutes carry over to the next session. |
 | US-4 | collect different pieces at different times | Room shows the current time window and its piece set. |
 | US-5 | browse her pieces | Collection grid by time window; owned count; unowned as silhouette. |
 | US-6 | unlock a theme with pieces | Theme shows recipe with owned/required. Unlock consumes pieces and places the theme's items in the room right away. |
@@ -71,13 +72,15 @@ Accounts, sync, mobile/tablet layouts, social, rankings, payments, native apps, 
 | evening | 저녁 | 17:00–21:00 | sunset glass, warm lamp, cat |
 | night | 밤 | 21:00–05:00 | stars, moon, candle |
 
-- A piece belongs to the window in which its 30-min block completes.
+- Every 5 focused minutes = 1 roll. A roll drops a piece with 60% chance.
+- Dry pity: after 2 empty rolls in a row, the next roll always drops (max wait 15 min). Expected ≈ 7.7 pieces per focused hour.
+- A piece belongs to the window in which its 5-min block completes.
 - Rarity per roll: common 70%, rare 25%, special 5%.
 - Pity: after 8 rolls without rare or better, the next roll is at least rare.
 - Paused time does not count. No caps of any kind.
-- Minutes left over when a session ends (under 30) carry into the next session, so stopping never loses progress.
+- Minutes left over when a session ends (under 5) carry into the next session, so stopping never loses progress.
 
-**Themes**: a theme costs a recipe of 6–12 pieces from 1–2 windows and unlocks 2–4 room items plus a matching window view. MVP content: 4 themes, 24 piece types (6 per window). Add themes after she has used it for a week.
+**Themes**: a theme costs a recipe of 20–28 pieces (≈ 3–4 focused hours, mostly in its windows) from 1–2 windows and unlocks 2–4 room items plus a matching window view. MVP content: 4 themes, 24 piece types (6 per window). Add themes after she has used it for a week.
 
 ---
 
@@ -110,12 +113,13 @@ Why no Supabase: one user, one laptop, no competition to protect. A backend adds
 ### 3.3 State shape (single IndexedDB key `state`)
 ```ts
 type State = {
-  version: 1;
+  version: 2; // v1 counted 30-min blocks; migrate() multiplies blocksAwarded by 6
   timer: { segments: { start: number; end: number | null }[]; blocksAwarded: number }; // open segment = running
-  carryMs: number; // leftover focus from earlier sessions, < 30 min
+  carryMs: number; // leftover focus from earlier sessions, < 5 min
   daily: Record<string, number>; // local YYYY-MM-DD -> focused ms, split at midnight
   pieces: Partial<Record<PieceId, number>>;
   rollsSinceRare: number;
+  rollsSinceDrop: number; // empty rolls in a row, for dry pity
   unlockedThemes: ThemeId[];
   room: Partial<Record<Slot, ItemId>>;
 };
@@ -126,9 +130,10 @@ type State = {
 |---|---|
 | `start / pause / resume / end` | Segment-based timer. `pause` adds the closed segment to `daily`. `end` awards, then stores the remainder in `carryMs`. |
 | `focusedMs(timer, now)` | Sum of segment lengths (open segment counts up to `now`). |
-| `pendingBlocks(state, now)` | `floor((carryMs + focusedMs) / 30min) − blocksAwarded` |
+| `pendingBlocks(state, now)` | `floor((carryMs + focusedMs) / 5min) − blocksAwarded` |
 | `blockCompletedAt(state, k)` | Walks segments to find the wall-clock time block k finished, so it lands in the right window even if the app was closed. |
 | `windowAt(ts)` / `skyPhaseAt(ts)` | Local hour → drop window (4) / sky phase (8, visual only). |
+| `award` drop check | Per block: drop if `rollsSinceDrop ≥ 2` or `rng() < 0.6`, else count an empty roll. While idle, rolls are paid from `carryMs` directly so a later session can't pay them twice. |
 | `roll(window, rollsSinceRare, rng)` | Rarity with pity, then uniform piece within window+rarity. |
 | `award` / `tick` | Awards all pending blocks. `tick` also stops the timer if the clock moved backwards. |
 | `unlock` / `place` / `applyTheme` | Throw `INSUFFICIENT_PIECES`, `ALREADY_UNLOCKED`, `ITEM_LOCKED`, `SLOT_MISMATCH`. |
@@ -146,7 +151,7 @@ type State = {
 
 ### 3.6 Tests
 - Vitest for `lib/game.ts`: focused time with pauses, block assignment across window boundaries and midnight, pity, unlock success/failure, migration.
-- One Playwright smoke with a fake clock: start timer, advance 30 min, see a piece, import a backup, unlock a theme, reload, state persists.
+- One Playwright smoke with a fake clock: start timer, advance 15 min, see a piece (dry pity guarantees one), import a backup, unlock a theme, reload, state persists.
 
 ---
 
@@ -212,7 +217,7 @@ Navigation: everything is one page; panels open over the room. Small floating me
 ### 4.6 States
 | State | Treatment |
 |---|---|
-| First run | Bare room (desk + window). One line: "30분 공부하면 첫 조각이 나와요". |
+| First run | Bare room (desk + window). One line: "5분마다 조각이 나올 기회가 와요". Timer pill shows "다음 조각 기회까지 N분". |
 | Empty pieces | Silhouettes + "공부하면 조각이 모여요". |
 | Theme not affordable | Missing pieces listed with the window they drop in. |
 | Storage unavailable (private mode) | Banner "이 모드에서는 기록이 저장되지 않아요". |
@@ -231,3 +236,32 @@ Resolved: laptop only (no sync); art is original SVG made by the agent.
 1. **Duplicates.** After all themes are unlocked, extra pieces have no use. Proposal: 5 duplicates → 1 chosen piece, in v1.1.
 2. **Diary (일기장).** Lightest version: a notebook item on the desk that opens a one-line daily note. v1.1 candidate.
 3. **Ambient sound.** Would she use rain/café sounds while it is running? Cheap to add, but sound is a taste call.
+
+---
+
+## 6. Market Research & Decisions (2026-10-13)
+
+### 6.1 What comparable products do
+| Product | Reward mechanic | Takeaway for StillRoom |
+|---|---|---|
+| Study Bunny | Coins for every minute on task, spent on items and music. | Fine-grained progress feels good; 5-min rolls sit between per-minute and per-session. |
+| Forest | One tree per session; coins unlock species and ambient tracks. | Session-end rewards alone feel slow for a backdrop left on all day. |
+| Focus Friend (Hank Green) | Finished sessions earn currency for room decorations in themes; no ads, cosmetic-only purchases. Hit #1 free on the App Store. | Room decorating by theme is a proven cozy loop. Keep it calm and cosmetic. |
+| Spirit City: Lofi Sessions | XP unlocks room cosmetics; collectible spirits are discovered at random while focusing; no shop. | Random discovery during focus + decor earned only through play fits StillRoom exactly. |
+| 열품타 | Stopwatch, app blocking, study groups, white noise; no decorating rewards found. | The timer is table stakes; the room and collection are the differentiator. |
+
+Research on variable rewards: variable-ratio schedules drive the most consistent repeat behavior, and visible progress is the other reliable driver. The same sources warn that randomness should serve the user, not compete with focus.
+
+### 6.2 Decisions
+| # | Decision | Why | Rejected |
+|---|---|---|---|
+| D1 | One roll per 5 focused minutes | User request; fine-grained progress (Study Bunny) without per-minute noise. | 30-min blocks (too slow for an all-day backdrop), per-minute (toast spam). |
+| D2 | 60% drop chance per roll | Variable reward, matching Spirit City's random discovery. | Guaranteed piece every 5 min (predictable, inflates economy 1.6×). |
+| D3 | Dry pity: guaranteed piece after 2 empty rolls | "Reward time, never punish it" (§1.3): max 15 min without a piece. | Pure randomness (long dry streaks feel like punishment). |
+| D4 | Empty rolls are silent | Calm, not gamey (§1.3); no "꽝" message. | Showing misses (adds noise and disappointment). |
+| D5 | Recipes ×3 (20–28 pieces, ≈ 3–4 h per theme) | Keeps 4 themes from being finished on day one at ≈ 7.7 pieces/h. | Keeping old recipes (every theme in ~1 h). |
+| D6 | State v2 with migration (v1 blocks × 6) | Existing local data keeps its progress with no double payouts. | Resetting state. |
+
+Taste call to revisit after a week of real use: the 60% / pity-2 tuning. If it feels stingy, raise the chance to 70%; if themes go too fast, raise recipes rather than lowering the chance.
+
+Sources: [Study Bunny listing](https://gridfiti.com/?p=17933), [Forest on the App Store](https://apps.apple.com/au/app/forest-focus-for-productivity/id866450515), [Focus Friend on the App Store](https://apps.apple.com/US/app/id6742278016), [Focus Friend coverage](https://blog.washcoll.edu/wordpress/theelm/2025/09/new-focus-friend-study-app-by-hank-green-explodes-in-popularity/), [Spirit City on Steam](https://store.steampowered.com/app/2113850/), [Spirit City coverage](https://www.tubefilter.com/2024/03/07/spirit-city-lofi-girl-sessions-focus-game/), [열품타 on the App Store](https://apps.apple.com/kr/app/%EC%97%B4%EC%A0%95%ED%92%88%EC%9D%80-%ED%83%80%EC%9D%B4%EB%A8%B8/id1441909643), [Variable rewards](https://concepts.dsebastien.net/concept/variable-rewards/).

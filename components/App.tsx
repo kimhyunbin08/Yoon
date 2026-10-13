@@ -208,7 +208,7 @@ export default function App() {
         <>
           {status === "idle" && !hasPieces && (
             <p className="ui-fade absolute bottom-24 left-1/2 -translate-x-1/2 rounded-full bg-surface px-4 py-2 text-sm text-muted backdrop-blur">
-              30분 공부하면 첫 조각이 나와요
+              5분마다 조각이 나올 기회가 와요
             </p>
           )}
           <Controls status={status} onStart={act.start} onPause={act.pause} onResume={act.resume} onEnd={act.end} onFullscreen={act.fullscreen} />

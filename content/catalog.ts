@@ -78,25 +78,25 @@ export const THEMES = [
     id: "dawn-garden",
     nameKo: "새벽 정원",
     descriptionKo: "이슬 맺힌 화분과 하얀 커튼",
-    recipe: { dew: 2, sunbeam: 2, sprout: 2, feather: 1, "pink-cloud": 1 },
+    recipe: { dew: 6, sunbeam: 5, sprout: 6, feather: 2, "pink-cloud": 2 },
   },
   {
     id: "sunny-cafe",
     nameKo: "햇살 카페",
     descriptionKo: "라떼 한 잔과 따뜻한 펜던트 조명",
-    recipe: { cloud: 2, pencil: 1, "lemon-candy": 1, "sunset-glass": 2, "warm-light": 2, cocoa: 1 },
+    recipe: { cloud: 6, pencil: 4, "lemon-candy": 2, "sunset-glass": 5, "warm-light": 5, cocoa: 2 },
   },
   {
     id: "sunset-cat",
     nameKo: "노을 고양이",
     descriptionKo: "방석 위에서 잠든 고양이",
-    recipe: { "sunset-glass": 2, "maple-leaf": 3, "warm-light": 1, "cat-bell": 1, "sunset-cat": 1 },
+    recipe: { "sunset-glass": 6, "maple-leaf": 8, "warm-light": 4, "cat-bell": 2, "sunset-cat": 1 },
   },
   {
     id: "starry-library",
     nameKo: "별밤 도서관",
     descriptionKo: "촛불, 별 전구, 밤바다가 보이는 창",
-    recipe: { star: 3, candle: 2, firefly: 2, moon: 1, letter: 1, aurora: 1, mug: 1 },
+    recipe: { star: 8, candle: 6, firefly: 6, moon: 2, letter: 2, aurora: 1, mug: 3 },
   },
 ] as const satisfies readonly ThemeDef[];
 export type ThemeId = (typeof THEMES)[number]["id"];
