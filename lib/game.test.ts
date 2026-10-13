@@ -131,6 +131,16 @@ describe("drops", () => {
     expect(new Set(drops.map((d) => d.at))).toEqual(new Set([at(10, 5)]));
   });
 
+  it("counts pieces earned this session and resets on the next start", () => {
+    let r = award(start(initialState(), at(10)), at(10, 10), cycle(0.5, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99)); // 2 drops × 3
+    expect(r.state.timer.piecesEarned).toBe(6);
+    r = award(r.state, at(10, 15), cycle(0.5, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99));
+    expect(r.state.timer.piecesEarned).toBe(9);
+    const ended = end(r.state, at(10, 16), always()).state;
+    expect(ended.timer.piecesEarned).toBe(0);
+    expect(start(ended, at(11)).timer.piecesEarned).toBe(0);
+  });
+
   it("never gives an empty 5 minutes", () => {
     const s = start(initialState(), at(10));
     const { drops } = award(s, at(11), () => 0.99);
@@ -215,8 +225,9 @@ describe("migrate", () => {
       room: {},
     };
     const s = migrate(v1);
-    expect(s.version).toBe(3);
+    expect(s.version).toBe(4);
     expect(s.timer.blocksAwarded).toBe(12);
+    expect(s.timer.piecesEarned).toBe(0);
     // 10 min carry + 60 min focused = 70 min = 14 rolls; 12 already paid as two v1 pieces.
     expect(award(s, at(11), always()).drops).toHaveLength(2);
   });
@@ -224,7 +235,7 @@ describe("migrate", () => {
   it("drops v2's dry-pity counter", () => {
     const v2 = { ...initialState(), version: 2, rollsSinceDrop: 1 };
     const s = migrate(v2);
-    expect(s.version).toBe(3);
+    expect(s.version).toBe(4);
     expect("rollsSinceDrop" in s).toBe(false);
   });
 
@@ -238,7 +249,7 @@ describe("migrate", () => {
 
   it("rejects junk", () => {
     expect(() => migrate(null)).toThrow("INVALID_STATE");
-    expect(() => migrate({ version: 4 })).toThrow("INVALID_STATE");
+    expect(() => migrate({ version: 5 })).toThrow("INVALID_STATE");
     expect(() => migrate({ version: 3, pieces: [] })).toThrow("INVALID_STATE");
   });
 });

@@ -23,9 +23,9 @@ export const ODDS = { special: 0.05, rare: 0.25 }; // common = remainder
 const V1_BLOCK_MS = 30 * 60_000;
 
 export type Segment = { start: number; end: number | null };
-export type Timer = { segments: Segment[]; blocksAwarded: number };
+export type Timer = { segments: Segment[]; blocksAwarded: number; piecesEarned: number }; // piecesEarned: this session
 export type State = {
-  version: 3;
+  version: 4;
   timer: Timer;
   carryMs: number; // focused time left over from previous sessions, < BLOCK_MS
   daily: Record<string, number>; // local YYYY-MM-DD -> focused ms (closed segments only)
@@ -40,8 +40,8 @@ type Result = { state: State; drops: Drop[] };
 
 export function initialState(): State {
   return {
-    version: 3,
-    timer: { segments: [], blocksAwarded: 0 },
+    version: 4,
+    timer: { segments: [], blocksAwarded: 0, piecesEarned: 0 },
     carryMs: 0,
     daily: {},
     pieces: {},
@@ -117,12 +117,6 @@ export function pendingBlocks(s: State, now: number): number {
   return Math.floor((s.carryMs + focusedMs(s.timer, now)) / BLOCK_MS) - s.timer.blocksAwarded;
 }
 
-/** Ms of focus until the next drop. */
-export function msToNextDrop(s: State, now: number): number {
-  const total = s.carryMs + focusedMs(s.timer, now);
-  return BLOCK_MS - (total % BLOCK_MS);
-}
-
 /** Wall-clock time at which block k (1-based, counted in this session) completed. */
 export function blockCompletedAt(s: State, k: number, now: number): number {
   let need = k * BLOCK_MS - s.carryMs;
@@ -138,7 +132,7 @@ export function blockCompletedAt(s: State, k: number, now: number): number {
 
 export function start(s: State, now: number): State {
   if (timerStatus(s.timer) !== "idle") return s;
-  return { ...s, timer: { segments: [{ start: now, end: null }], blocksAwarded: 0 } };
+  return { ...s, timer: { segments: [{ start: now, end: null }], blocksAwarded: 0, piecesEarned: 0 } };
 }
 
 export function pause(s: State, now: number): State {
@@ -160,7 +154,7 @@ export function end(s: State, now: number, rng: Rng): Result {
   const { state, drops } = award(pause(s, now), now, rng);
   const total = state.carryMs + focusedMs(state.timer, now);
   return {
-    state: { ...state, carryMs: total - state.timer.blocksAwarded * BLOCK_MS, timer: { segments: [], blocksAwarded: 0 } },
+    state: { ...state, carryMs: total - state.timer.blocksAwarded * BLOCK_MS, timer: initialState().timer },
     drops,
   };
 }
@@ -211,7 +205,7 @@ export function award(s: State, now: number, rng: Rng): Result {
       // Idle (only carried-over time): spend it from the carry so the next session can't award it again.
       ...(s.timer.segments.length === 0
         ? { carryMs: s.carryMs - n * BLOCK_MS }
-        : { timer: { ...s.timer, blocksAwarded: s.timer.blocksAwarded + n } }),
+        : { timer: { ...s.timer, blocksAwarded: s.timer.blocksAwarded + n, piecesEarned: s.timer.piecesEarned + drops.length } }),
     },
     drops,
   };
@@ -266,18 +260,19 @@ const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object
 
 /** Validates stored or imported state and upgrades older versions. Throws INVALID_STATE. */
 export function migrate(raw: unknown): State {
-  if (!isObj(raw) || ![1, 2, 3].includes(raw.version as number)) throw new Error("INVALID_STATE");
+  if (!isObj(raw) || ![1, 2, 3, 4].includes(raw.version as number)) throw new Error("INVALID_STATE");
   const base = initialState();
   const timer = { ...base.timer, ...(isObj(raw.timer) ? raw.timer : {}) } as Timer;
   // v1 counted 30-minute blocks; v2 counts 5-minute rolls.
   if (raw.version === 1 && typeof timer.blocksAwarded === "number") timer.blocksAwarded *= V1_BLOCK_MS / BLOCK_MS;
   const { rollsSinceDrop: _drop, ...rest } = raw; // v2-only field
   void _drop;
-  const s = { ...base, ...rest, version: 3, timer } as State;
+  const s = { ...base, ...rest, version: 4, timer } as State;
   const ok =
     Array.isArray(s.timer.segments) &&
     s.timer.segments.every((g) => isObj(g) && typeof g.start === "number" && (g.end === null || typeof g.end === "number")) &&
     typeof s.timer.blocksAwarded === "number" &&
+    typeof s.timer.piecesEarned === "number" &&
     typeof s.carryMs === "number" &&
     typeof s.rollsSinceRare === "number" &&
     isObj(s.daily) &&

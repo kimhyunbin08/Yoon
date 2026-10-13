@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
 import { PIECES, WINDOW_INFO } from "../content/catalog";
-import { dayKey, focusedMs, msToNextDrop, nextWindowChange, studiedOn, timerStatus, windowAt } from "../lib/game";
+import { dayKey, focusedMs, nextWindowChange, studiedOn, timerStatus, windowAt } from "../lib/game";
 import { useStore } from "../lib/store";
 import { PieceIcon } from "./art/pieces";
 
@@ -78,7 +78,11 @@ export function TimerPill() {
           {status === "paused" && <span className="ml-2 align-middle text-sm font-normal text-muted">일시정지</span>}
         </p>
       )}
-      {status !== "idle" && <p className="text-xs text-muted">다음 조각까지 {fmtDuration(msToNextDrop(state, t) + 59_999)}</p>}
+      {status !== "idle" && (
+        <p className="text-xs text-muted" aria-label="이번에 모은 조각">
+          이번에 모은 조각 <span className="tabular font-semibold text-text">{state.timer.piecesEarned}</span>개
+        </p>
+      )}
       <p className="text-xs text-muted">오늘 {fmtDuration(studiedOn(state, dayKey(t), t))}</p>
     </div>
   );

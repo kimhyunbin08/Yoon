@@ -1,7 +1,7 @@
 # StillRoom — Product Spec
 
 Source: user interview (2026-10).
-Status: v0.6 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
+Status: v0.7 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
 Sections: 1 Ideation · 2 PRD · 3 TRD · 4 Design Spec · 5 Open Questions · 6 Market Research & Decisions. Agent instructions live in `AGENTS.md`.
 
 Platform decision: **laptop only** (desktop browser, landscape). No phone, no tablet, no sync.
@@ -54,7 +54,7 @@ Accounts, sync, mobile/tablet layouts, social, rankings, payments, native apps, 
 | ID | She wants to… | Acceptance criteria |
 |---|---|---|
 | US-1 | open the app and see her room | No login. Room renders full screen within 1 s from cached assets. Installable as a desktop PWA (Chrome/Edge; Safari via Add to Dock). |
-| US-2 | start / pause / stop a study timer | Timer survives reload and closing the tab (stored start timestamp). No upper limit. |
+| US-2 | start / pause / stop a study timer | Timer survives reload and closing the tab (stored start timestamp). No upper limit. While a session is running or paused, the timer pill shows the session time and the pieces earned since start ("이번에 모은 조각 27개"); the end toast repeats both ("이번 공부 45분 · 조각 27개"). No countdown to the next drop. |
 | US-3 | get pieces for studying | Every 5 min of timer time she gets 1–5 random pieces (3 is most common), awarded live while running with one small, quiet toast per drop. Leftover minutes carry over to the next session. |
 | US-4 | collect different pieces at different times | Room shows the current time window and its piece set. |
 | US-5 | browse her pieces | Collection grid by time window; owned count; unowned as silhouette. |
@@ -112,8 +112,8 @@ Why no Supabase: one user, one laptop, no competition to protect. A backend adds
 ### 3.3 State shape (single IndexedDB key `state`)
 ```ts
 type State = {
-  version: 3; // v1 counted 30-min blocks (migrate multiplies blocksAwarded by 6); v3 drops v2's rollsSinceDrop
-  timer: { segments: { start: number; end: number | null }[]; blocksAwarded: number }; // open segment = running
+  version: 4; // v1 counted 30-min blocks (migrate multiplies blocksAwarded by 6); v3 drops v2's rollsSinceDrop; v4 adds timer.piecesEarned
+  timer: { segments: { start: number; end: number | null }[]; blocksAwarded: number; piecesEarned: number }; // open segment = running; piecesEarned resets on start
   carryMs: number; // leftover focus from earlier sessions, < 5 min
   daily: Record<string, number>; // local YYYY-MM-DD -> focused ms, split at midnight
   pieces: Partial<Record<PieceId, number>>;
@@ -204,7 +204,7 @@ Text on pastel fills uses `--text`, never white (contrast ≥ 4.5:1). Font: Pret
 ### 4.5 Screens
 | Screen | Content | Primary action |
 |---|---|---|
-| Room | Full room, timer pill, current window chip, today total | `공부 시작` / `일시정지` / `끝내기` |
+| Room | Full room, timer pill (session time + pieces earned this session), current window chip, today total | `공부 시작` / `일시정지` / `끝내기` |
 | Pieces (조각함) | Right drawer: tabs by window, 3-col grid, silhouettes | click → detail |
 | Themes (테마) | Right drawer: live room preview per theme + recipe `have/need` | `열기` when complete, then `방에 통째로 적용` |
 | Decorate (꾸미기) | Room with slot highlights (click a slot), bottom sheet with slot tabs + items | click to place, `비우기` |
@@ -215,7 +215,7 @@ Navigation: everything is one page; panels open over the room. Small floating me
 ### 4.6 States
 | State | Treatment |
 |---|---|
-| First run | Bare room (desk + window). One line: "5분마다 조각이 1~5개 나와요". Timer pill shows "다음 조각까지 N분". |
+| First run | Bare room (desk + window). One line: "5분마다 조각이 1~5개 나와요". |
 | Empty pieces | Silhouettes + "공부하면 조각이 모여요". |
 | Theme not affordable | Missing pieces listed with the window they drop in. |
 | Storage unavailable (private mode) | Banner "이 모드에서는 기록이 저장되지 않아요". |
@@ -261,6 +261,7 @@ Research on variable rewards: variable-ratio schedules drive the most consistent
 | D6 | State v2 with migration (v1 blocks × 6) | Existing local data keeps its progress with no double payouts. | Resetting state. |
 | D7 | Every 5 min: 1–5 pieces, weighted to 3 (10/20/40/20/10) | User request (2026-10-13): never an empty 5 minutes, 3 most common, 4–5 still feel like a lucky haul. | Uniform 1–5; weighting toward 1. |
 | D8 | Recipes ×5 (105–140 pieces) and state v3 | ≈ 36 pieces/h is ~4.7× the D2 economy; ×5 keeps ≈ 3–4 h per theme. v3 removes the unused dry-pity counter. | Keeping D5 recipes (each theme in under an hour). |
+| D9 | Timer pill shows pieces earned this session; next-drop countdown removed (state v4) | User request (2026-10-13): the running total is the motivating number; a countdown adds clock-watching. Stored in state so it survives reload. | In-memory counter (lost on reload). |
 
 Taste call to revisit after a week of real use: if themes still go too fast, raise recipes rather than shrinking drops (bigger drops are the fun part).
 

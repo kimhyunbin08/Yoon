@@ -94,7 +94,7 @@ export default function App() {
       const r = game.end(before, Date.now(), Math.random);
       store.set(r.state);
       announce(r.drops);
-      toast(`이번 공부 ${fmtDuration(focused)}`);
+      toast(`이번 공부 ${fmtDuration(focused)} · 조각 ${before.timer.piecesEarned + r.drops.length}개`);
     },
     unlock: (id: ThemeId) => {
       try {

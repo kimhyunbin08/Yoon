@@ -8,7 +8,12 @@ test("study, earn pieces, unlock a theme, persist across reload", async ({ page 
   await page.getByRole("button", { name: "공부 시작" }).click();
   // 15 minutes = 3 drops of 1–5 pieces each.
   await page.clock.fastForward("15:05");
-  await expect(page.getByText(/조각.*얻었어요/).first()).toBeVisible();
+  await expect(page.getByText(/조각 \d+개/).first()).toBeVisible();
+  // Session counter: 3 drops of 1–5 pieces each.
+  const earned = Number(await page.getByLabel("이번에 모은 조각").locator("span").textContent());
+  expect(earned).toBeGreaterThanOrEqual(3);
+  expect(earned).toBeLessThanOrEqual(15);
+  await expect(page.getByText("다음 조각까지")).toHaveCount(0);
   // Ambient mode hid the controls while idle; moving the mouse brings them back.
   await page.mouse.move(700, 400);
   await page.getByRole("button", { name: "끝내기" }).click();
