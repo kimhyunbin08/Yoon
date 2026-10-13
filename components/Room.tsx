@@ -51,10 +51,13 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
           <stop offset="0" style={{ stopColor: "var(--c-glow)", stopOpacity: 0.7 }} />
           <stop offset="1" style={{ stopColor: "var(--c-glow)", stopOpacity: 0 }} />
         </radialGradient>
-        <pattern id={`dots${uid}`} width="48" height="48" patternUnits="userSpaceOnUse">
-          <circle cx="12" cy="12" r="2.5" fill={v("wall-d")} />
-          <circle cx="36" cy="36" r="2.5" fill={v("wall-d")} />
-        </pattern>
+        {[1, 2, 3].map((n) => (
+          <radialGradient key={n} id={`prism${n}${uid}`}>
+            <stop offset="0" style={{ stopColor: `var(--prism-${n})`, stopOpacity: 0.95 }} />
+            <stop offset="0.5" style={{ stopColor: `var(--prism-${n})`, stopOpacity: 0.45 }} />
+            <stop offset="1" style={{ stopColor: `var(--prism-${n})`, stopOpacity: 0 }} />
+          </radialGradient>
+        ))}
         <clipPath id={`glass${uid}`}>
           <rect x="522" y="118" width="396" height="364" rx="12" />
         </clipPath>
@@ -64,14 +67,20 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
         </mask>
       </defs>
 
-      {/* wall + floor */}
+      {/* wall + floor: near-white ivory */}
       <rect width="1440" height="720" fill={v("wall")} />
-      <rect width="1440" height="720" fill={`url(#dots${uid})`} opacity="0.5" />
       <rect y="706" width="1440" height="16" fill={v("cream")} />
       <rect y="720" width="1440" height="180" fill={v("floor")} />
       {[770, 820, 870].map((y) => (
-        <rect key={y} y={y} width="1440" height="3" fill={v("floor-d")} opacity="0.5" />
+        <rect key={y} y={y} width="1440" height="2" fill={v("floor-d")} opacity="0.35" />
       ))}
+
+      {/* prism backdrop: soft pastel light blooms sweeping diagonally, behind all furniture (SPEC §4.3) */}
+      <g aria-hidden>
+        <ellipse cx="360" cy="560" rx="640" ry="300" transform="rotate(-28 360 560)" fill={`url(#prism1${uid})`} />
+        <ellipse cx="1130" cy="290" rx="540" ry="260" transform="rotate(-28 1130 290)" fill={`url(#prism2${uid})`} />
+        <ellipse cx="780" cy="830" rx="720" ry="170" transform="rotate(-6 780 830)" fill={`url(#prism3${uid})`} />
+      </g>
 
       {/* window */}
       <rect x="500" y="96" width="440" height="408" rx="22" fill={v("white")} />
@@ -133,9 +142,9 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
               width={w}
               height={h}
               rx="18"
-              fill={on ? "var(--primary)" : "transparent"}
+              fill={on ? "var(--ring)" : "transparent"}
               fillOpacity={on ? 0.18 : 0}
-              stroke="var(--primary)"
+              stroke="var(--ring)"
               strokeWidth={on ? 5 : 3}
               strokeDasharray={on ? undefined : "12 10"}
               opacity={on ? 1 : 0.6}

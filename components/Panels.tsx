@@ -74,7 +74,7 @@ export function PiecesPanel({ now, onClose }: { now: number; onClose: () => void
               type="button"
               onClick={() => setSelected(p.id)}
               aria-pressed={selected === p.id}
-              className={`relative flex flex-col items-center gap-1 rounded-2xl bg-surface-solid p-3 ring-2 ${n ? rarityRing[p.rarity] : "ring-transparent"} ${selected === p.id ? "outline outline-2 outline-primary" : ""}`}
+              className={`relative flex flex-col items-center gap-1 rounded-2xl bg-surface-solid p-3 ring-2 ${n ? rarityRing[p.rarity] : "ring-transparent"} ${selected === p.id ? "outline outline-2 outline-ring" : ""}`}
             >
               <PieceIcon id={p.id} size={56} locked={!n} />
               <span className="text-xs">{n ? p.nameKo : "???"}</span>
@@ -216,7 +216,7 @@ export function DecoratePanel({
           type="button"
           onClick={() => onPlace(slot, null)}
           aria-pressed={!state.room[slot]}
-          className={`flex h-20 w-36 shrink-0 items-center justify-center rounded-2xl bg-surface-solid text-sm ring-2 ${!state.room[slot] ? "ring-primary" : "ring-transparent"}`}
+          className={`flex h-20 w-36 shrink-0 items-center justify-center rounded-2xl bg-surface-solid text-sm ring-2 ${!state.room[slot] ? "ring-ring" : "ring-transparent"}`}
         >
           비우기
         </button>
@@ -230,7 +230,7 @@ export function DecoratePanel({
               disabled={!unlocked}
               onClick={() => onPlace(slot, i.id)}
               aria-pressed={on}
-              className={`flex h-20 w-44 shrink-0 flex-col items-start justify-center rounded-2xl bg-surface-solid px-4 text-left text-sm ring-2 disabled:opacity-50 ${on ? "ring-primary" : "ring-transparent"}`}
+              className={`flex h-20 w-44 shrink-0 flex-col items-start justify-center rounded-2xl bg-surface-solid px-4 text-left text-sm ring-2 disabled:opacity-50 ${on ? "ring-ring" : "ring-transparent"}`}
             >
               <span className="font-semibold">{i.nameKo}</span>
               <span className="text-xs text-muted">{unlocked ? THEME_BY_ID[i.themeId].nameKo : `잠김 · ${THEME_BY_ID[i.themeId].nameKo}`}</span>
@@ -276,7 +276,7 @@ export function RecordsPanel({ now, onImport, onClose }: { now: number; onImport
           {days.map((d, i) => (
             <div key={d.key} className="flex flex-1 flex-col items-center gap-2">
               <div
-                className={`w-full rounded-t-lg ${i === 6 ? "bg-primary" : "bg-pink"}`}
+                className={`w-full rounded-t-lg ${i === 6 ? "bg-ring" : "bg-primary"}`}
                 style={{ height: `${Math.max(2, (d.ms / max) * 128)}px` }}
                 aria-label={`${d.label}요일 ${fmtDuration(d.ms)}`}
                 title={fmtDuration(d.ms)}

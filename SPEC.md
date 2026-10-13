@@ -1,7 +1,7 @@
 # StillRoom — Product Spec
 
 Source: user interview (2026-10).
-Status: v0.7 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
+Status: v0.8 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
 Sections: 1 Ideation · 2 PRD · 3 TRD · 4 Design Spec · 5 Open Questions · 6 Market Research & Decisions. Agent instructions live in `AGENTS.md`.
 
 Platform decision: **laptop only** (desktop browser, landscape). No phone, no tablet, no sync.
@@ -165,7 +165,8 @@ Pastel, soft, quiet. A front-facing study room: desk in the foreground, window s
 | `--surface` | `#FFFFFF` (85% opacity over room) | `#2A2D45` (85%) |
 | `--text` | `#3B3A45` | `#ECEAF5` |
 | `--text-muted` | `#8A8797` | `#A6A3B8` |
-| `--primary` | `#B9A7E8` lavender | `#C8B9F0` |
+| `--primary` | `#FBF6EC` ivory (fill) + `--primary-line` `#E6DCC8` 1px border | `#F1E8D6` ivory |
+| `--ring` | `#A38B5B` deep ivory (focus ring, decorate slot outline; ≥ 3:1 on white) | `#E3D3B0` |
 | `--accent-pink` | `#F6C1CF` | `#E8A9BA` |
 | `--accent-mint` | `#BDE5D3` | `#9FD1BC` |
 | `--accent-peach` | `#FFD6B8` | `#E9BB98` |
@@ -177,6 +178,20 @@ Text on pastel fills uses `--text`, never white (contrast ≥ 4.5:1). Font: Pret
 ### 4.3 Room scene
 - **Laptop only, landscape.** Scene is a 16:10 stage (1440×900 design size) scaled to fit the window with `object-fit: cover` behavior; narrower windows crop the side walls, never the window or desk. Minimum supported window: 1024×640.
 - Composition: window center back wall, shelf left wall, frame/poster right wall, desk across the bottom, lamp on desk, floor strip.
+- **Prism backdrop** (mood board: "+prism", inspired by light, inverted to a light theme). Wall `#FDFBF7` and floor `#F6F1E8` are near-white ivory with no wallpaper pattern. Three large, soft pastel light blooms (radial gradients, no blur filter, static so the room stays cheap to leave open) sweep diagonally across wall and floor, behind all furniture. Their colors follow the 8 sky phases:
+
+| Phase | Bloom colors |
+|---|---|
+| predawn | lavender `#CBBEF0`, periwinkle `#B8C4E8`, pink `#F2D4E4` |
+| dawn | pink `#FFD1DC`, lavender `#E6E6FA`, peach `#FFE1CC` |
+| morning | sky `#BFE6F7`, mint `#CFEFE3`, ivory `#FFF6E5` |
+| midday | sky `#B8E4FA`, ice `#E3F4FF`, mint `#D3F2E6` |
+| afternoon | gold `#FFE9A8`, beige `#F5F0DA`, peach `#FFDCC2` |
+| evening | apricot `#FFD0A8`, coral `#FFC1B0`, pink `#FBD3DC` |
+| twilight | violet `#D9C6F2`, orchid `#F6C6EA`, peach `#FFD6C8` |
+| night | lavender `#C9C3EE`, blue `#B9C3EC`, mauve `#E9CFEA` |
+
+  Furniture, window, shelf, and item art are unchanged.
 - Slots: `window`, `wall`, `shelf`, `desk`, `lighting`, `floor`.
 - **Mood (from the mood board): "beauty inside emptiness".** Out the window, a lone ivory tower rises from a sea of clouds. Low-poly faces (two tones per surface) with a few square "pixel" marks. Calm and empty, never busy.
 - **Sky follows 8 phases** (visual only; drops still use the 4 windows in §2.4). Mood board hex values, softened toward white/lavender to stay pastel:
@@ -262,6 +277,7 @@ Research on variable rewards: variable-ratio schedules drive the most consistent
 | D7 | Every 5 min: 1–5 pieces, weighted to 3 (10/20/40/20/10) | User request (2026-10-13): never an empty 5 minutes, 3 most common, 4–5 still feel like a lucky haul. | Uniform 1–5; weighting toward 1. |
 | D8 | Recipes ×5 (105–140 pieces) and state v3 | ≈ 36 pieces/h is ~4.7× the D2 economy; ×5 keeps ≈ 3–4 h per theme. v3 removes the unused dry-pity counter. | Keeping D5 recipes (each theme in under an hour). |
 | D9 | Timer pill shows pieces earned this session; next-drop countdown removed (state v4) | User request (2026-10-13): the running total is the motivating number; a countdown adds clock-watching. Stored in state so it survives reload. | In-memory counter (lost on reload). |
+| D10 | Prism backdrop on white: ivory wall/floor with time-of-day pastel blooms; UI accent becomes ivory; focus/outline use deep ivory `--ring` | User request (2026-10-13) with a "+prism" mood board. Radial gradients instead of blur filters keep an all-day backdrop cheap. A separate `--ring` keeps focus visible, since ivory on white is invisible. | Per-theme bloom colors; wall-only change; lavender accent kept. |
 
 Taste call to revisit after a week of real use: if themes still go too fast, raise recipes rather than shrinking drops (bigger drops are the fun part).
 
