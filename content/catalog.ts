@@ -60,14 +60,33 @@ export const PIECES = [
 export type PieceId = (typeof PIECES)[number]["id"];
 export type Piece = (typeof PIECES)[number];
 
-export const SLOTS = ["window", "wall", "shelf", "desk", "lighting", "floor"] as const;
+export const SLOTS = [
+  "wallpaper",
+  "windowCover",
+  "windowView",
+  "lighting",
+  "calendar",
+  "wallDecor",
+  "shelfObject",
+  "desk",
+  "deskObject1",
+  "deskObject2",
+  "plant",
+  "floor",
+] as const;
 export type Slot = (typeof SLOTS)[number];
 export const SLOT_KO: Record<Slot, string> = {
-  window: "창문",
-  wall: "벽",
-  shelf: "선반",
+  wallpaper: "벽지",
+  windowCover: "창문 가림막",
+  windowView: "창밖 풍경",
+  lighting: "전등",
+  calendar: "달력",
+  wallDecor: "벽 장식",
+  shelfObject: "선반 위",
   desk: "책상",
-  lighting: "조명",
+  deskObject1: "책상 위 1",
+  deskObject2: "책상 위 2",
+  plant: "화분",
   floor: "바닥",
 };
 
@@ -108,32 +127,75 @@ export const THEMES = [
 export type ThemeId = (typeof THEMES)[number]["id"];
 export type Theme = (typeof THEMES)[number];
 
-export type WindowView = "hills" | "garden" | "sea" | "city";
+export type WindowView = "hills" | "garden" | "sea" | "city" | "cafe" | "rooftops";
 type ItemDef = { id: string; themeId: ThemeId; slot: Slot; nameKo: string; view?: WindowView };
 
+// One item per slot per theme (SPEC §2.4). Ids of the first 18 items predate v5 and must not change.
 export const ITEMS = [
-  { id: "garden-window", themeId: "dawn-garden", slot: "window", nameKo: "정원 창", view: "garden" },
-  { id: "garden-plants", themeId: "dawn-garden", slot: "shelf", nameKo: "화분 선반" },
+  { id: "garden-wallpaper", themeId: "dawn-garden", slot: "wallpaper", nameKo: "잎사귀 벽지" },
+  { id: "garden-window", themeId: "dawn-garden", slot: "windowCover", nameKo: "하얀 커튼" },
+  { id: "garden-view", themeId: "dawn-garden", slot: "windowView", nameKo: "정원 풍경", view: "garden" },
+  { id: "paper-lantern", themeId: "dawn-garden", slot: "lighting", nameKo: "종이 등" },
+  { id: "flower-calendar", themeId: "dawn-garden", slot: "calendar", nameKo: "꽃 달력" },
+  { id: "leaf-frame", themeId: "dawn-garden", slot: "wallDecor", nameKo: "잎사귀 액자" },
+  { id: "garden-plants", themeId: "dawn-garden", slot: "shelfObject", nameKo: "화분 선반" },
+  { id: "trestle-desk", themeId: "dawn-garden", slot: "desk", nameKo: "나무 다리 책상" },
+  { id: "watering-can", themeId: "dawn-garden", slot: "deskObject1", nameKo: "물뿌리개" },
+  { id: "flower-notebook", themeId: "dawn-garden", slot: "deskObject2", nameKo: "꽃잎 노트" },
+  { id: "fern-pot", themeId: "dawn-garden", slot: "plant", nameKo: "고사리 화분" },
   { id: "garden-rug", themeId: "dawn-garden", slot: "floor", nameKo: "민트 러그" },
 
-  { id: "latte-cake", themeId: "sunny-cafe", slot: "desk", nameKo: "라떼와 케이크" },
+  { id: "cafe-wallpaper", themeId: "sunny-cafe", slot: "wallpaper", nameKo: "줄무늬 벽지" },
+  { id: "cafe-curtain", themeId: "sunny-cafe", slot: "windowCover", nameKo: "카페 반커튼" },
+  { id: "cafe-view", themeId: "sunny-cafe", slot: "windowView", nameKo: "카페 거리", view: "cafe" },
   { id: "pendant-lamp", themeId: "sunny-cafe", slot: "lighting", nameKo: "펜던트 조명" },
-  { id: "menu-board", themeId: "sunny-cafe", slot: "wall", nameKo: "카페 메뉴판" },
+  { id: "tearoff-calendar", themeId: "sunny-cafe", slot: "calendar", nameKo: "일력" },
+  { id: "menu-board", themeId: "sunny-cafe", slot: "wallDecor", nameKo: "카페 메뉴판" },
+  { id: "coffee-jars", themeId: "sunny-cafe", slot: "shelfObject", nameKo: "원두 병" },
+  { id: "cafe-table", themeId: "sunny-cafe", slot: "desk", nameKo: "카페 테이블" },
+  { id: "latte-cake", themeId: "sunny-cafe", slot: "deskObject1", nameKo: "라떼와 케이크" },
+  { id: "moka-pot", themeId: "sunny-cafe", slot: "deskObject2", nameKo: "모카 포트" },
+  { id: "olive-tree", themeId: "sunny-cafe", slot: "plant", nameKo: "올리브 나무" },
+  { id: "checker-rug", themeId: "sunny-cafe", slot: "floor", nameKo: "체크 러그" },
 
+  { id: "dot-wallpaper", themeId: "sunset-cat", slot: "wallpaper", nameKo: "땡땡이 벽지" },
+  { id: "roller-shade", themeId: "sunset-cat", slot: "windowCover", nameKo: "롤 블라인드" },
+  { id: "rooftop-view", themeId: "sunset-cat", slot: "windowView", nameKo: "지붕 풍경", view: "rooftops" },
+  { id: "wall-sconce", themeId: "sunset-cat", slot: "lighting", nameKo: "벽등" },
+  { id: "cat-calendar", themeId: "sunset-cat", slot: "calendar", nameKo: "고양이 달력" },
+  { id: "sunset-poster", themeId: "sunset-cat", slot: "wallDecor", nameKo: "노을 포스터" },
+  { id: "book-shelf", themeId: "sunset-cat", slot: "shelfObject", nameKo: "책과 선인장" },
+  { id: "paw-desk", themeId: "sunset-cat", slot: "desk", nameKo: "발바닥 책상" },
+  { id: "yarn-basket", themeId: "sunset-cat", slot: "deskObject1", nameKo: "털실 바구니" },
+  { id: "fish-mug", themeId: "sunset-cat", slot: "deskObject2", nameKo: "물고기 머그" },
+  { id: "cat-grass", themeId: "sunset-cat", slot: "plant", nameKo: "캣그라스" },
   { id: "cat-cushion", themeId: "sunset-cat", slot: "floor", nameKo: "잠든 고양이" },
-  { id: "sunset-poster", themeId: "sunset-cat", slot: "wall", nameKo: "노을 포스터" },
-  { id: "book-shelf", themeId: "sunset-cat", slot: "shelf", nameKo: "책과 선인장" },
 
-  { id: "sea-window", themeId: "starry-library", slot: "window", nameKo: "밤바다 창", view: "sea" },
+  { id: "star-wallpaper", themeId: "starry-library", slot: "wallpaper", nameKo: "별 벽지" },
+  { id: "sea-window", themeId: "starry-library", slot: "windowCover", nameKo: "라벤더 커튼" },
+  { id: "sea-view", themeId: "starry-library", slot: "windowView", nameKo: "밤바다", view: "sea" },
   { id: "star-garland", themeId: "starry-library", slot: "lighting", nameKo: "별 전구" },
-  { id: "candle-books", themeId: "starry-library", slot: "desk", nameKo: "촛불과 책" },
-  { id: "moon-clock", themeId: "starry-library", slot: "wall", nameKo: "달 시계" },
+  { id: "moon-calendar", themeId: "starry-library", slot: "calendar", nameKo: "달 위상 달력" },
+  { id: "moon-clock", themeId: "starry-library", slot: "wallDecor", nameKo: "달 시계" },
+  { id: "star-jars", themeId: "starry-library", slot: "shelfObject", nameKo: "별 유리병" },
+  { id: "library-desk", themeId: "starry-library", slot: "desk", nameKo: "도서관 책상" },
+  { id: "candle-books", themeId: "starry-library", slot: "deskObject1", nameKo: "촛불과 책" },
+  { id: "hourglass", themeId: "starry-library", slot: "deskObject2", nameKo: "모래시계" },
+  { id: "tall-cactus", themeId: "starry-library", slot: "plant", nameKo: "기둥 선인장" },
+  { id: "floor-books", themeId: "starry-library", slot: "floor", nameKo: "책 더미" },
 
-  { id: "city-window", themeId: "neon-glitch", slot: "window", nameKo: "도시 야경 창", view: "city" },
-  { id: "neon-sign", themeId: "neon-glitch", slot: "wall", nameKo: "네온 간판" },
-  { id: "boombox", themeId: "neon-glitch", slot: "shelf", nameKo: "붐박스와 카세트" },
+  { id: "neon-wallpaper", themeId: "neon-glitch", slot: "wallpaper", nameKo: "네온 벽지" },
+  { id: "city-window", themeId: "neon-glitch", slot: "windowCover", nameKo: "블라인드" },
+  { id: "city-view", themeId: "neon-glitch", slot: "windowView", nameKo: "도시 야경", view: "city" },
   { id: "neon-tube", themeId: "neon-glitch", slot: "lighting", nameKo: "네온 막대" },
-  { id: "crt-monitor", themeId: "neon-glitch", slot: "desk", nameKo: "CRT 모니터" },
+  { id: "led-calendar", themeId: "neon-glitch", slot: "calendar", nameKo: "LED 달력" },
+  { id: "neon-sign", themeId: "neon-glitch", slot: "wallDecor", nameKo: "네온 간판" },
+  { id: "boombox", themeId: "neon-glitch", slot: "shelfObject", nameKo: "붐박스와 카세트" },
+  { id: "neon-desk", themeId: "neon-glitch", slot: "desk", nameKo: "LED 책상" },
+  { id: "crt-monitor", themeId: "neon-glitch", slot: "deskObject1", nameKo: "CRT 모니터" },
+  { id: "retro-keyboard", themeId: "neon-glitch", slot: "deskObject2", nameKo: "레트로 키보드" },
+  { id: "neon-cactus", themeId: "neon-glitch", slot: "plant", nameKo: "네온 선인장" },
+  { id: "neon-rug", themeId: "neon-glitch", slot: "floor", nameKo: "네온 격자 러그" },
 ] as const satisfies readonly ItemDef[];
 export type ItemId = (typeof ITEMS)[number]["id"];
 export type Item = (typeof ITEMS)[number];

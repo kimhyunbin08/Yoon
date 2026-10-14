@@ -8,14 +8,27 @@ import { ITEM_ART, ITEM_GLOWS, type Glow } from "./art/items";
 // (globals.css); color comes only from the sky, window light, shade, and lamp glows.
 const v = (name: string) => `var(--c-${name})`;
 
+/** Where each slot's item lives; used for the decorate highlight and click targets. */
 export const SLOT_RECTS: Record<Slot, [number, number, number, number]> = {
-  lighting: [20, 6, 1400, 78],
-  window: [470, 90, 500, 440],
-  wall: [1070, 150, 270, 300],
-  shelf: [90, 190, 320, 170],
-  desk: [280, 450, 280, 160],
+  wallpaper: [0, 0, 1440, 706],
+  windowCover: [466, 74, 508, 456],
+  windowView: [522, 118, 396, 364],
+  lighting: [380, 0, 700, 100],
+  calendar: [300, 92, 180, 145],
+  wallDecor: [1070, 150, 270, 300],
+  shelfObject: [90, 190, 320, 170],
+  desk: [190, 590, 1060, 310],
+  deskObject1: [280, 440, 280, 165],
+  deskObject2: [596, 470, 240, 135],
+  plant: [20, 480, 220, 410],
   floor: [0, 720, 1440, 180],
 };
+// Larger targets first so smaller ones sit on top and win the click.
+const CLICK_ORDER = (Object.keys(SLOT_RECTS) as Slot[]).sort((a, b) => area(b) - area(a));
+function area(s: Slot) {
+  const [, , w, h] = SLOT_RECTS[s];
+  return w * h;
+}
 
 // Light shaft from the window glass, falling diagonally down-right to the floor.
 const WINDOW_LIGHT = "M522 118 L918 118 L1348 900 L752 900 L522 482 Z";
@@ -35,8 +48,8 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
     const id = room[slot];
     return id && ITEM_BY_ID[id] ? id : undefined;
   };
-  const windowItem = item("window");
-  const view: WindowView = (windowItem && (ITEM_BY_ID[windowItem] as { view?: WindowView }).view) || "hills";
+  const viewItem = item("windowView");
+  const view: WindowView = (viewItem && (ITEM_BY_ID[viewItem] as { view?: WindowView }).view) || "hills";
   const glows: Glow[] = [{ cx: 1118, cy: 520, r: 300 }, ...(Object.keys(SLOT_RECTS) as Slot[]).flatMap((s) => ITEM_GLOWS[item(s) ?? ""] ?? [])];
   const Art = (slot: Slot) => {
     const id = item(slot);
@@ -110,6 +123,7 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
       <rect width="1440" height="720" fill={v("wall")} />
       <rect y="720" width="1440" height="180" fill={v("floor")} />
       <ellipse cx="720" cy="892" rx="560" ry="24" style={{ fill: "var(--shade)", opacity: 0.18, mixBlendMode: "multiply" }} />
+      {Art("wallpaper")}
 
       {/* window view: outlined too, clipped to the glass */}
       <g clipPath={`url(#glass${uid})`}>
@@ -137,38 +151,31 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
         <rect x="715" y="118" width="10" height="364" fill={v("white")} />
         <rect x="522" y="295" width="396" height="10" fill={v("white")} />
         <rect x="480" y="496" width="480" height="22" rx="10" fill={v("cream")} />
-        {Art("window")}
+        {Art("windowCover")}
+        {/* calendars are drawn around x=250; shifted right so the window-time chip never covers them */}
+        <g transform="translate(140 52)">{Art("calendar")}</g>
+        {Art("wallDecor")}
+        {Art("lighting")}
 
         <rect x="100" y="330" width="300" height="16" rx="6" fill={v("wood")} />
         <path d="M140 346h22l-22 26Z M338 346h22v26Z" fill={v("wood-d")} />
-        {Art("shelf")}
+        {Art("shelfObject")}
 
-        {Art("wall")}
-        {Art("lighting")}
-        <FloorPlant />
+        {Art("plant") ?? <FloorPlant />}
         {Art("floor")}
 
-        <rect x="250" y="676" width="28" height="224" fill={v("desk-d")} />
-        <rect x="1162" y="676" width="28" height="224" fill={v("desk-d")} />
-        <rect x="226" y="624" width="988" height="54" rx="6" fill={v("desk-d")} />
-        <rect x="640" y="646" width="160" height="10" rx="5" fill={v("desk")} />
-        <rect x="200" y="600" width="1040" height="28" rx="10" fill={v("desk")} />
+        {Art("desk") ?? <BaseDesk />}
 
-        <rect x="610" y="584" width="190" height="16" rx="4" fill={v("lav")} />
-        <rect x="622" y="570" width="170" height="14" rx="4" fill={v("cream")} />
-        <rect x="866" y="548" width="7" height="44" rx="3" fill={v("yellow-d")} transform="rotate(-10 869 570)" />
-        <rect x="880" y="540" width="7" height="50" rx="3" fill={v("blue-d")} transform="rotate(6 883 565)" />
-        <rect x="854" y="560" width="46" height="40" rx="10" fill={v("mint")} />
+        {/* desk lamp: the room's main light, not a slot */}
         <ellipse cx="1100" cy="597" rx="46" ry="8" fill={v("mint-d")} />
-        {/* lamp arm: a white tube with a pencil outline */}
         <path d="M1100 596 L1072 506 L1118 450" stroke="var(--line-art)" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" fill="none" />
         <path d="M1100 596 L1072 506 L1118 450" stroke={v("white")} strokeWidth="7.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
         <path d="M1092 414h52l26 58h-104Z" fill={v("mint")} />
         <ellipse cx="1118" cy="472" rx="20" ry="6" fill={v("yellow")} />
-        {Art("desk")}
-      </g>
 
-      <LeafShadow />
+        {Art("deskObject1")}
+        {Art("deskObject2") ?? <BaseDeskObjects />}
+      </g>
 
       {/* light and shadow carry all the color (SPEC §4.3) */}
       <rect width="1440" height="900" mask={`url(#shade${uid})`} style={{ fill: "var(--shade)", opacity: "var(--shade-opacity)", mixBlendMode: "multiply" }} />
@@ -186,29 +193,29 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
         ),
       )}
 
-      {highlight !== undefined &&
-        (Object.keys(SLOT_RECTS) as Slot[]).map((slot) => {
-          const [x, y, w, h] = SLOT_RECTS[slot];
-          const on = slot === highlight;
-          return (
+      {highlight !== undefined && (
+        <g>
+          {CLICK_ORDER.map((slot) => {
+            const [x, y, w, h] = SLOT_RECTS[slot];
+            return <rect key={slot} x={x} y={y} width={w} height={h} fill="transparent" style={{ cursor: "pointer" }} onClick={() => onSlot?.(slot)} />;
+          })}
+          {highlight && (
             <rect
-              key={slot}
-              x={x}
-              y={y}
-              width={w}
-              height={h}
+              x={SLOT_RECTS[highlight][0]}
+              y={SLOT_RECTS[highlight][1]}
+              width={SLOT_RECTS[highlight][2]}
+              height={SLOT_RECTS[highlight][3]}
               rx="18"
-              fill={on ? "var(--ring)" : "transparent"}
-              fillOpacity={on ? 0.18 : 0}
+              fill="var(--ring)"
+              fillOpacity={0.14}
               stroke="var(--ring)"
-              strokeWidth={on ? 5 : 3}
-              strokeDasharray={on ? undefined : "12 10"}
-              opacity={on ? 1 : 0.6}
-              style={{ cursor: "pointer" }}
-              onClick={() => onSlot?.(slot)}
+              strokeWidth={5}
+              strokeDasharray="14 10"
+              pointerEvents="none"
             />
-          );
-        })}
+          )}
+        </g>
+      )}
     </svg>
   );
 }
@@ -228,35 +235,28 @@ function Merged({ children }: { children: ReactNode }) {
   );
 }
 
-/** Palm-leaf shadow cast across the lit floor by a plant just off the right edge. */
-function LeafShadow() {
-  const fronds = [
-    { x: 1460, y: 880, a: 200, len: 300 },
-    { x: 1470, y: 790, a: 188, len: 260 },
-    { x: 1430, y: 960, a: 222, len: 250 },
-  ];
+/** Base desk, shown when the desk slot is empty. */
+function BaseDesk() {
   return (
-    <g opacity="0.18" style={{ mixBlendMode: "multiply" }} aria-hidden>
-      {fronds.map((f, i) => {
-        const dir = (f.a * Math.PI) / 180;
-        const tip = [f.x + Math.cos(dir) * f.len, f.y + Math.sin(dir) * f.len];
-        return (
-          <g key={i} style={{ fill: "var(--shade)" }}>
-            <path d={`M${f.x} ${f.y} L${tip[0]} ${tip[1]}`} style={{ stroke: "var(--shade)" }} strokeWidth="4" strokeLinecap="round" />
-            {Array.from({ length: 16 }, (_, k) => {
-              const t = 0.1 + (k >> 1) * 0.11;
-              const side = k % 2 ? 1 : -1;
-              const len = 70 * (1 - t * 0.55);
-              const leaf = dir + side * 0.95 - 0.35; // leaflets sweep toward the frond tip
-              const bx = f.x + Math.cos(dir) * f.len * t;
-              const by = f.y + Math.sin(dir) * f.len * t;
-              const cx = bx + Math.cos(leaf) * len * 0.5;
-              const cy = by + Math.sin(leaf) * len * 0.5;
-              return <ellipse key={k} cx={cx} cy={cy} rx={len / 2} ry={7} transform={`rotate(${(leaf * 180) / Math.PI} ${cx} ${cy})`} />;
-            })}
-          </g>
-        );
-      })}
+    <g>
+      <rect x="250" y="676" width="28" height="224" fill={v("desk-d")} />
+      <rect x="1162" y="676" width="28" height="224" fill={v("desk-d")} />
+      <rect x="226" y="624" width="988" height="54" rx="6" fill={v("desk-d")} />
+      <rect x="640" y="646" width="160" height="10" rx="5" fill={v("desk")} />
+      <rect x="200" y="600" width="1040" height="28" rx="10" fill={v("desk")} />
+    </g>
+  );
+}
+
+/** Notebooks and a pencil cup, shown when the second desk-object slot is empty. */
+function BaseDeskObjects() {
+  return (
+    <g>
+      <rect x="610" y="584" width="190" height="16" rx="4" fill={v("lav")} />
+      <rect x="622" y="570" width="170" height="14" rx="4" fill={v("cream")} />
+      <rect x="866" y="548" width="7" height="44" rx="3" fill={v("yellow-d")} transform="rotate(-10 869 570)" />
+      <rect x="880" y="540" width="7" height="50" rx="3" fill={v("blue-d")} transform="rotate(6 883 565)" />
+      <rect x="854" y="560" width="46" height="40" rx="10" fill={v("mint")} />
     </g>
   );
 }

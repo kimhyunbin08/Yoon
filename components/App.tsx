@@ -23,7 +23,7 @@ export default function App() {
   const phase = game.skyPhaseAt(now);
 
   const [panel, setPanel] = useState<PanelId | null>(null);
-  const [slot, setSlot] = useState<Slot>("window");
+  const [slot, setSlot] = useState<Slot>("wallpaper");
   const [toasts, setToasts] = useState<Toast[]>([]);
   const panelRef = useRef(panel);
   useEffect(() => {

@@ -26,10 +26,10 @@ components/App.tsx   timer actions, ticking, shortcuts, ambient mode, wake lock
 components/Room.tsx  room scene, slots, window view, window light, line-art group
 components/Hud.tsx   window chip, timer pill, controls, menu, toasts
 components/Panels.tsx pieces, themes, decorate, records
-components/art/      original SVG art: one component per piece and room item
+components/art/      original SVG art: pieces.tsx, items.tsx (first items), themes/<theme>.tsx (one item per slot)
 lib/game.ts          pure game logic (no I/O)
 lib/store.ts         IndexedDB load/save, backup export/import
-content/catalog.ts   pieces, themes, recipes, items (typed). Ids are persisted: add, never rename.
+content/catalog.ts   pieces, themes, 12 room slots, recipes, items (typed). Ids are persisted: add, never rename.
 public/              manifest, sw.js, icons
 e2e/                 Playwright smoke
 ```

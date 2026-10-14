@@ -25,7 +25,7 @@ const V1_BLOCK_MS = 30 * 60_000;
 export type Segment = { start: number; end: number | null };
 export type Timer = { segments: Segment[]; blocksAwarded: number; piecesEarned: number }; // piecesEarned: this session
 export type State = {
-  version: 4;
+  version: 5;
   timer: Timer;
   carryMs: number; // focused time left over from previous sessions, < BLOCK_MS
   daily: Record<string, number>; // local YYYY-MM-DD -> focused ms (closed segments only)
@@ -40,7 +40,7 @@ type Result = { state: State; drops: Drop[] };
 
 export function initialState(): State {
   return {
-    version: 4,
+    version: 5,
     timer: { segments: [], blocksAwarded: 0, piecesEarned: 0 },
     carryMs: 0,
     daily: {},
@@ -258,16 +258,32 @@ export function applyTheme(s: State, themeId: ThemeId): State {
 
 const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
+// v4 had 6 coarse slots; v5 splits the room into 12 (SPEC §4.3). Window items split into cover + view.
+const V5_SLOT: Record<string, Slot> = { window: "windowCover", wall: "wallDecor", shelf: "shelfObject", desk: "deskObject1", lighting: "lighting", floor: "floor" };
+const V5_VIEW: Record<string, ItemId> = { "garden-window": "garden-view", "sea-window": "sea-view", "city-window": "city-view" };
+
+function migrateRoomV5(old: Record<string, unknown>): State["room"] {
+  const room: State["room"] = {};
+  for (const [slot, id] of Object.entries(old)) {
+    const to = V5_SLOT[slot];
+    if (!to || typeof id !== "string" || !(id in ITEM_BY_ID)) continue;
+    room[to] = id as ItemId;
+    if (slot === "window" && V5_VIEW[id]) room.windowView = V5_VIEW[id];
+  }
+  return room;
+}
+
 /** Validates stored or imported state and upgrades older versions. Throws INVALID_STATE. */
 export function migrate(raw: unknown): State {
-  if (!isObj(raw) || ![1, 2, 3, 4].includes(raw.version as number)) throw new Error("INVALID_STATE");
+  if (!isObj(raw) || ![1, 2, 3, 4, 5].includes(raw.version as number)) throw new Error("INVALID_STATE");
   const base = initialState();
   const timer = { ...base.timer, ...(isObj(raw.timer) ? raw.timer : {}) } as Timer;
   // v1 counted 30-minute blocks; v2 counts 5-minute rolls.
   if (raw.version === 1 && typeof timer.blocksAwarded === "number") timer.blocksAwarded *= V1_BLOCK_MS / BLOCK_MS;
   const { rollsSinceDrop: _drop, ...rest } = raw; // v2-only field
   void _drop;
-  const s = { ...base, ...rest, version: 4, timer } as State;
+  const room = (raw.version as number) < 5 && isObj(raw.room) ? migrateRoomV5(raw.room) : raw.room;
+  const s = { ...base, ...rest, room, version: 5, timer } as State;
   const ok =
     Array.isArray(s.timer.segments) &&
     s.timer.segments.every((g) => isObj(g) && typeof g.start === "number" && (g.end === null || typeof g.end === "number")) &&

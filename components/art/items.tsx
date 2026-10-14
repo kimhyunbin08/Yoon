@@ -1,9 +1,14 @@
 "use client";
-import { useEffect, useState, type ComponentType, type ReactNode } from "react";
+import { useEffect, useState, type ComponentType } from "react";
 import type { ItemId } from "../../content/catalog";
+import { CAFE_ART, CAFE_GLOWS } from "./themes/cafe";
+import { CAT_ART, CAT_GLOWS } from "./themes/cat";
+import { GARDEN_ART, GARDEN_GLOWS } from "./themes/garden";
+import { NEON_ART, NEON_GLOWS } from "./themes/neon";
+import { STARRY_ART, STARRY_GLOWS } from "./themes/starry";
+import { Glitch, NEON_CYAN, NEON_PINK, v } from "./shared";
 
 // Original room item art in 1440x900 stage coordinates. Each item draws itself inside its slot (Room SLOT_RECTS).
-const v = (name: string) => `var(--c-${name})`;
 
 /** A light source; `color` marks neon light that stays faintly visible in daytime. */
 export type Glow = { cx: number; cy: number; r: number; color?: "pink" | "cyan" };
@@ -247,10 +252,6 @@ function MoonClock() {
 
 // ---------- neon glitch theme (retro punk) ----------
 // Neon tubes, the CRT screen, and lit city windows emit light, so they are the only theme parts with color.
-// The RGB-split filter is defined once per Room (<filter id="stillroom-rgbsplit">).
-const NEON_PINK = "var(--neon-pink)";
-const NEON_CYAN = "var(--neon-cyan)";
-const Glitch = ({ children }: { children: ReactNode }) => <g filter="url(#stillroom-rgbsplit)">{children}</g>;
 
 function CityWindow() {
   // Half-lowered blinds over the top of the glass.
@@ -348,7 +349,13 @@ function Boombox() {
   );
 }
 
-export const ITEM_ART: Record<ItemId, ComponentType> = {
+// Window views are drawn by Room from the windowView item's `view`, so they have no component here.
+export const ITEM_ART: Partial<Record<ItemId, ComponentType>> = {
+  ...GARDEN_ART,
+  ...CAFE_ART,
+  ...CAT_ART,
+  ...STARRY_ART,
+  ...NEON_ART,
   "garden-window": GardenWindow,
   "garden-plants": GardenPlants,
   "garden-rug": GardenRug,
@@ -370,6 +377,11 @@ export const ITEM_ART: Record<ItemId, ComponentType> = {
 };
 
 export const ITEM_GLOWS: Partial<Record<string, Glow[]>> = {
+  ...GARDEN_GLOWS,
+  ...CAFE_GLOWS,
+  ...CAT_GLOWS,
+  ...STARRY_GLOWS,
+  ...NEON_GLOWS,
   "pendant-lamp": [{ cx: 1000, cy: 300, r: 260 }],
   "star-garland": GARLAND.map(([x, y]) => ({ cx: x, cy: y + 6, r: 36 })),
   "candle-books": [{ cx: 400, cy: 460, r: 150 }],

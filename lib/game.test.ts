@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { PIECE_BY_ID } from "../content/catalog";
+import { ITEMS, PIECE_BY_ID, SLOTS, THEMES, type ThemeId } from "../content/catalog";
 import {
   applyTheme,
   award,
@@ -196,14 +196,29 @@ describe("themes and room", () => {
   it("guards room placement", () => {
     expect(() => place(initialState(), "floor", "garden-rug")).toThrow("ITEM_LOCKED");
     const s = unlock(rich(), "dawn-garden");
-    expect(() => place(s, "wall", "garden-rug")).toThrow("SLOT_MISMATCH");
+    expect(() => place(s, "wallDecor", "garden-rug")).toThrow("SLOT_MISMATCH");
     expect(place(s, "floor", "garden-rug").room.floor).toBe("garden-rug");
     expect(place(place(s, "floor", "garden-rug"), "floor", null).room).toEqual({});
   });
 
-  it("applies a whole theme", () => {
+  it("applies a whole theme: one item in every slot", () => {
     const s = applyTheme(unlock(rich(), "dawn-garden"), "dawn-garden");
-    expect(s.room).toEqual({ window: "garden-window", shelf: "garden-plants", floor: "garden-rug" });
+    expect(Object.keys(s.room).sort()).toEqual([...SLOTS].sort());
+    expect(s.room.windowCover).toBe("garden-window");
+    expect(s.room.windowView).toBe("garden-view");
+  });
+
+  it("gives every theme exactly one item per slot", () => {
+    for (const t of THEMES) {
+      const slots = ITEMS.filter((i) => i.themeId === t.id).map((i) => i.slot);
+      expect(slots.sort()).toEqual([...SLOTS].sort());
+    }
+  });
+
+  it("lets slots mix items from different themes", () => {
+    let s = { ...initialState(), unlockedThemes: ["dawn-garden", "neon-glitch"] as ThemeId[] };
+    s = place(place(s, "desk", "trestle-desk"), "deskObject1", "crt-monitor");
+    expect(s.room).toEqual({ desk: "trestle-desk", deskObject1: "crt-monitor" });
   });
 });
 
@@ -225,17 +240,34 @@ describe("migrate", () => {
       room: {},
     };
     const s = migrate(v1);
-    expect(s.version).toBe(4);
+    expect(s.version).toBe(5);
     expect(s.timer.blocksAwarded).toBe(12);
     expect(s.timer.piecesEarned).toBe(0);
     // 10 min carry + 60 min focused = 70 min = 14 rolls; 12 already paid as two v1 pieces.
     expect(award(s, at(11), always()).drops).toHaveLength(2);
   });
 
+  it("moves a v4 room into the 12 v5 slots", () => {
+    const v4 = {
+      ...initialState(),
+      version: 4,
+      room: { window: "city-window", wall: "neon-sign", shelf: "boombox", lighting: "neon-tube", desk: "crt-monitor", floor: "cat-cushion" },
+    };
+    expect(migrate(v4).room).toEqual({
+      windowCover: "city-window",
+      windowView: "city-view",
+      wallDecor: "neon-sign",
+      shelfObject: "boombox",
+      lighting: "neon-tube",
+      deskObject1: "crt-monitor",
+      floor: "cat-cushion",
+    });
+  });
+
   it("drops v2's dry-pity counter", () => {
     const v2 = { ...initialState(), version: 2, rollsSinceDrop: 1 };
     const s = migrate(v2);
-    expect(s.version).toBe(4);
+    expect(s.version).toBe(5);
     expect("rollsSinceDrop" in s).toBe(false);
   });
 
@@ -249,7 +281,7 @@ describe("migrate", () => {
 
   it("rejects junk", () => {
     expect(() => migrate(null)).toThrow("INVALID_STATE");
-    expect(() => migrate({ version: 5 })).toThrow("INVALID_STATE");
+    expect(() => migrate({ version: 6 })).toThrow("INVALID_STATE");
     expect(() => migrate({ version: 3, pieces: [] })).toThrow("INVALID_STATE");
   });
 });

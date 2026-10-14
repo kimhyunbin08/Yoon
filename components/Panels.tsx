@@ -193,7 +193,7 @@ export function DecoratePanel({
   return (
     <section role="dialog" aria-label="꾸미기" className="absolute inset-x-0 bottom-0 bg-surface px-8 pb-6 pt-4 shadow-[0_-4px_32px_rgb(59_58_69/0.14)] backdrop-blur-md">
       <div className="mb-3 flex items-center justify-between">
-        <div role="tablist" className="flex gap-1">
+        <div role="tablist" className="flex flex-wrap gap-1">
           {SLOTS.map((s) => (
             <button
               key={s}
