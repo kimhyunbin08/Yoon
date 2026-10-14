@@ -48,7 +48,8 @@ const EMBLEM: Record<PieceId, ReactNode> = {
 export function PieceIcon({ id, size = 48 }: { id: PieceId; size?: number }) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   return (
-    <svg viewBox="0 0 64 64" width={size} height={size} role="img" aria-label={PIECE_BY_ID[id].nameKo}>
+    // size is in px at the 16px base; rem keeps icons in step with the fluid UI
+    <svg viewBox="0 0 64 64" style={{ width: `${size / 16}rem`, height: `${size / 16}rem` }} role="img" aria-label={PIECE_BY_ID[id].nameKo}>
       <defs>
         {/* the room's colored-pencil wobble, scaled for a small icon */}
         <filter id={`pencil${uid}`} x="-10%" y="-10%" width="120%" height="120%">

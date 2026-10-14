@@ -29,7 +29,7 @@ export function fmtClock(ms: number) {
 }
 
 const Svg = ({ children }: { children: ReactNode }) => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+  <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
     {children}
   </svg>
 );

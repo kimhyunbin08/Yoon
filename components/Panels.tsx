@@ -23,7 +23,7 @@ import { Room } from "./Room";
 
 function Drawer({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return (
-    <aside role="dialog" aria-label={title} className="absolute inset-y-0 right-0 flex w-[440px] max-w-full flex-col bg-surface shadow-[0_4px_32px_rgb(59_58_69/0.14)] backdrop-blur-md">
+    <aside role="dialog" aria-label={title} className="absolute inset-y-0 right-0 flex w-[27.5rem] max-w-[90vw] flex-col bg-surface shadow-[0_4px_32px_rgb(59_58_69/0.14)] backdrop-blur-md">
       <header className="flex items-center justify-between px-6 pb-3 pt-6">
         <h2 className="text-xl font-semibold">{title}</h2>
         <button type="button" onClick={onClose} aria-label="닫기 (Esc)" className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-line">

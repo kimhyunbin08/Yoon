@@ -38,7 +38,7 @@ e2e/                 Playwright smoke
 1. Game logic stays pure in `lib/game.ts`, with time and RNG injected. Any rule change updates `SPEC.md` §2.4 and the Vitest cases in the same commit.
 2. Never add caps, idle penalties, streak loss, or nagging notifications (`SPEC.md` §1.3).
 3. Bump `State.version` and add a `migrate()` step for any state shape change.
-4. Laptop only: design for a 1440×900 stage, support down to 1024×640. Do not build mobile or tablet layouts.
+4. Desktop windows of any size: draw on the 1440×900 stage; the room always fits whole (meet + overscanned wall/floor, so new background art must extend past the stage). UI sizes are rem-based off the fluid root font size: no fixed px for UI sizes. Do not build phone or tablet layouts.
 5. Art is original SVG drawn in this repo, following the style rules in `SPEC.md` §4.3. Do not add third-party images, icon packs, or copied artwork. Color art through CSS variables, never hardcoded hex.
 6. Use tokens from `SPEC.md` §4.2. No hardcoded hex in components.
 7. The room must stay smooth when left open for hours: only the timer pill re-renders each second, never the whole scene.

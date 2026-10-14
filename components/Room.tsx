@@ -2,9 +2,11 @@
 import { memo, useId, type ReactNode } from "react";
 import { ITEM_BY_ID, type ItemId, type SkyPhase, type Slot, type WindowView } from "../content/catalog";
 import { ITEM_ART } from "./art/items";
+import { OVER } from "./art/shared";
 
-// Stage is 1440x900. preserveAspectRatio="slice" crops the side walls on narrow windows,
-// never the window or the desk (SPEC §4.3). Inside `.room` the art palette maps to paper whites
+// Stage is 1440x900 and always fits whole ("meet"); the wall, floor, baseboard, and floor lines are
+// overscanned (OVER) so any leftover space continues the room instead of showing bars (SPEC §4.3, D18).
+// Inside `.room` the art palette maps to paper whites
 // (globals.css). There are no light or shadow effects: the only color is the sky in the window (SPEC §4.3).
 const v = (name: string) => `var(--c-${name})`;
 
@@ -75,7 +77,8 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
   return (
     <svg
       viewBox="0 0 1440 900"
-      preserveAspectRatio="xMidYMid slice"
+      preserveAspectRatio="xMidYMid meet"
+      overflow="visible"
       className={`room ${className ?? ""}`}
       aria-hidden={onSlot ? undefined : true}
     >
@@ -101,10 +104,16 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
         </mask>
       </defs>
 
-      {/* wall + floor: paper white */}
-      <rect width="1440" height="720" fill={v("wall")} />
-      <rect y="720" width="1440" height="180" fill={v("floor")} />
+      {/* wall + floor: paper white, overscanned past the stage on every side */}
+      <rect x={-OVER} y={-OVER} width={1440 + 2 * OVER} height={720 + OVER} fill={v("wall")} />
+      <rect x={-OVER} y="720" width={1440 + 2 * OVER} height={180 + OVER} fill={v("floor")} />
       {Art("wallpaper")}
+      {/* baseboard and floor boards, drawn outside the pencil filter so they can run past the stage */}
+      <rect x={-OVER} y="706" width={1440 + 2 * OVER} height="16" fill={v("cream")} />
+      <path d={`M${-OVER} 706 H${1440 + OVER} M${-OVER} 722 H${1440 + OVER}`} stroke="var(--line-art)" strokeWidth="2.2" />
+      {[770, 820, 870, 920, 970, 1020].map((y) => (
+        <rect key={y} x={-OVER} y={y} width={1440 + 2 * OVER} height="2" fill={v("floor-d")} opacity="0.5" />
+      ))}
 
       {/* window view: outlined too, clipped to the glass */}
       <g clipPath={`url(#glass${uid})`}>
@@ -118,11 +127,6 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
 
       {/* the room: every opaque shape gets a colored-pencil outline (globals.css .lineart) */}
       <g className="lineart" filter={pencil}>
-        <rect y="706" width="1440" height="16" fill={v("cream")} />
-        {[770, 820, 870].map((y) => (
-          <rect key={y} y={y} width="1440" height="2" fill={v("floor-d")} opacity="0.5" />
-        ))}
-
         {/* window frame: a ring so the glass stays open */}
         <path
           d="M522 96h396a22 22 0 0 1 22 22v364a22 22 0 0 1-22 22H522a22 22 0 0 1-22-22V118a22 22 0 0 1 22-22Z M534 118a12 12 0 0 0-12 12v340a12 12 0 0 0 12 12h372a12 12 0 0 0 12-12V130a12 12 0 0 0-12-12Z"

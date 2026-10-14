@@ -127,6 +127,11 @@
   --font-sans: "Pretendard Variable", Pretendard, system-ui, sans-serif;
 }
 
+/* Fluid UI (SPEC §4.3, D18): every UI size is in rem, so this one value scales text, buttons, chips, and panels with the window. */
+html {
+  font-size: clamp(13px, min(1.1vw, 1.9vh), 18px);
+}
+
 html,
 body {
   height: 100%;

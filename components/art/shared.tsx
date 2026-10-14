@@ -5,6 +5,9 @@ import { useEffect, useState, type ReactNode } from "react";
 export const v = (name: string) => `var(--c-${name})`;
 export const INK = "var(--line-art)";
 
+/** How far the background runs past the 1440x900 stage, in stage units: enough for a 21:9 monitor or a half-screen window. */
+export const OVER = 2400;
+
 /** A white tube (handle, arm, stem) with a pencil outline: ink stroke underneath, white stroke on top. */
 export function Tube({ d, width = 6 }: { d: string; width?: number }) {
   return (
@@ -54,7 +57,8 @@ export function WallPattern({ id, size, children }: { id: string; size: number; 
           {children}
         </pattern>
       </defs>
-      <rect className="no-line" width="1440" height="706" fill={`url(#${id})`} />
+      {/* overscanned like the wall (Room OVER), so wide or tall windows keep the pattern */}
+      <rect className="no-line" x={-OVER} y={-OVER} width={1440 + 2 * OVER} height={706 + OVER} fill={`url(#${id})`} />
     </>
   );
 }

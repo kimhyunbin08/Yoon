@@ -1,7 +1,7 @@
 # StillRoom — Product Spec
 
 Source: user interview (2026-10).
-Status: v0.15 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
+Status: v0.16 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
 Sections: 1 Ideation · 2 PRD · 3 TRD · 4 Design Spec · 5 Open Questions · 6 Market Research & Decisions · 7 Next Development Steps (planned, not built). Agent instructions live in `AGENTS.md`.
 
 Platform decision: **laptop only** (desktop browser, landscape). No phone, no tablet, no sync.
@@ -201,7 +201,7 @@ Pastel, soft, quiet. A front-facing study room: desk in the foreground, window s
 Text on pastel fills uses `--text`, never white (contrast ≥ 4.5:1). Font: Pretendard, sizes 12/14/16/20/28/48. Timer: tabular numerals. Radius 16 for cards, 999 for buttons. Shadow `0 4px 16px rgb(59 58 69 / 0.08)`.
 
 ### 4.3 Room scene
-- **Laptop only, landscape.** Scene is a 16:10 stage (1440×900 design size) scaled to fit the window with `object-fit: cover` behavior; narrower windows crop the side walls, never the window or desk. Minimum supported window: 1024×640.
+- **Any desktop window, fluid (D18).** The scene is drawn on a 16:10 stage (1440×900 design units) and **always fits whole** (`preserveAspectRatio="xMidYMid meet"`): window, desk, shelf, and calendar are never cropped at any window size or aspect ratio (half-screen split, 21:9 monitor, small windows). The wall, floor, baseboard, wallpaper, and floor lines are overscanned far beyond the stage, so the leftover space on any side continues the room instead of showing bars. The UI scales with the window through one fluid root font size, `clamp(13px, min(1.1vw, 1.9vh), 18px)`; every UI size is in rem, so text, buttons, chips, and panels grow and shrink together. Phones and tablets are still out of scope.
 - Composition: window center back wall, shelf left wall, frame/poster right wall, desk across the bottom, lamp on desk, floor strip.
 - **White scene, color from light only** (supersedes the prism backdrop, D12). Inside the room SVG every art fill maps to three paper whites (`--paper-1` `#FFFFFF`, `--paper-2` `#F3F1ED`, `--paper-3` `#E4E0DA`); only ink details (eyes) stay dark. Color comes from light: the sky in the window (the sun takes the phase's `--light` color). The window light shaft was removed on 2026-10-14 (D15). Piece icons in the UI keep their colors (they are collectibles, not part of the scene).
 - **No light or shadow effects** (D17, 2026-10-14): the duotone, ground shadow, and lamp glows were removed. The room is white paper with colored-pencil outlines; the only color is the sky inside the window (sun in `--light`).
@@ -305,6 +305,7 @@ Research on variable rewards: variable-ratio schedules drive the most consistent
 | D15 | 13 slots (top light and desk lamp split), calendar large on the right wall and wall decor small on the left, 8–9 items per theme (wallpaper only for 별밤 도서관 and 네온 글리치), recipes ×0.75, window light shaft removed | User request (2026-10-14). Fewer items per theme keeps each theme's character; cheaper recipes match the smaller sets. | One item per slot per theme (D14); keeping the light shaft. |
 | D16 | ~~Room-wide lofi duotone (light area / shadow area, per phase, tinted by the room theme); neon glitch becomes a pixel-art room mode with soft pink/sky static glitch ~~ (removed in D17) | User request (2026-10-14): base + shadow color per time like the lofi reference (shadow blue, light orange), outlines kept; neon was hard on the eyes. | Per-item theme colors; keeping the saturated neon wall. |
 | D17 | One currency per time window (새벽/낮/노을/밤의 조각), no rarity; piece art in the room's white pencil style; neon glitch theme removed; all light/shadow effects removed (duotone, ground shadow, glows) | User request (2026-10-14): currencies felt scattered; glitch theme and light effects not wanted. Old counts convert by window, nothing is lost. | Keeping 24 piece types with rarities. |
+| D18 | Room always fits whole (meet + overscanned wall/floor); UI sizes in rem off a fluid root font size | User request (2026-10-14): resize naturally with any window or device ratio. Fitting keeps every object visible; overscan avoids letterbox bars; one fluid root size scales the whole UI with no per-component breakpoints. | Cover-crop (calendar and shelf cut off on narrow windows); per-breakpoint layouts. |
 
 Taste call to revisit after a week of real use: if themes still go too fast, raise recipes rather than shrinking drops (bigger drops are the fun part).
 
