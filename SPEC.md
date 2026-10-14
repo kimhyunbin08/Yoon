@@ -145,6 +145,7 @@ Why no Supabase: one user, one laptop, no competition to protect. A backend adds
       refresh token for an access token with the client secret
 ```
 - **Google connection (D21):** GIS code client in popup mode → `/api/google/token` exchanges the code (`redirect_uri: "postmessage"`) and returns a refresh token, kept only in her browser (IndexedDB key `google`, not in `State` or the backup). Access tokens (1 h) live in memory and are renewed through the same route without a popup. Scopes: `calendar.calendarlist.readonly` and `calendar.events.readonly`. The route only talks to `oauth2.googleapis.com`, requires `X-Requested-With: XmlHttpRequest` and a same-origin `Origin`, and logs nothing.
+- **OAuth branding:** home page `https://stillroom-app.vercel.app`, privacy policy `/privacy` (`app/privacy/page.tsx`, Korean), authorized domain `stillroom-app.vercel.app`; published "In production" without verification (she clicks through the unverified-app screen once).
 - **Env:** `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (public) and `GOOGLE_CLIENT_SECRET` (Vercel only, never in the repo). Without the client id the calendar section is hidden.
 - **Agenda logic** (`lib/calendar.ts`, pure, unit tested): today's events from the API items, all-day first, ended ones dropped, next event marked.
 

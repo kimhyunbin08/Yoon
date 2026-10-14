@@ -21,7 +21,7 @@ npm run build        # static page + one function; env: NEXT_PUBLIC_GOOGLE_CLIEN
 
 ## Layout
 ```
-app/                 single page + globals.css (tokens, 8 sky phases); api/google/token (OAuth code/refresh exchange)
+app/                 single page + globals.css (tokens, 8 sky phases); api/google/token (OAuth code/refresh exchange); privacy/ (policy for the OAuth consent screen)
 components/App.tsx   timer actions, ticking, shortcuts, ambient mode, wake lock
 components/Room.tsx  room scene, slots, window view, window light, line-art group
 components/Hud.tsx   window chip, timer pill, controls, menu, toasts
