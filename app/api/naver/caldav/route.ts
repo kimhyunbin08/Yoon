@@ -28,7 +28,7 @@ async function dav(url: string, method: string, auth: string, depth: string, bod
   const res = await fetch(target, {
     method,
     headers: { Authorization: auth, Depth: depth, "Content-Type": "application/xml; charset=utf-8" },
-    body,
+    body: body || undefined, // GET can't carry a body
   });
   if (res.status === 401 || res.status === 403) throw new AuthError();
   if (!res.ok) throw new Error(`DAV_${res.status}`);
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     return Response.json({ error: "forbidden" }, { status: 403 });
   }
   const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
-  const { id, password, timeMin, timeMax } = body ?? {};
+  const { id, password, timeMin, timeMax, tz } = body ?? {};
   const ok = (v: unknown, max: number): v is string => typeof v === "string" && v.length > 0 && v.length <= max;
   if (!ok(id, 100) || !ok(password, 200) || !ok(timeMin, 40) || !ok(timeMax, 40) || Number.isNaN(Date.parse(timeMin)) || Number.isNaN(Date.parse(timeMax))) {
     return Response.json({ error: "bad_request" }, { status: 400 });
@@ -72,30 +72,45 @@ export async function POST(req: Request) {
     const start = davTime(timeMin);
     const end = davTime(timeMax);
     const query = `<?xml version="1.0"?><c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"><d:prop><c:calendar-data><c:expand start="${start}" end="${end}"/></c:calendar-data></d:prop><c:filter><c:comp-filter name="VCALENDAR"><c:comp-filter name="VEVENT"><c:time-range start="${start}" end="${end}"/></c:comp-filter></c:comp-filter></c:filter></c:calendar-query>`;
-    const statuses: string[] = [];
-    const reports = await Promise.all(
-      calendars.map((href) =>
-        dav(href, "REPORT", auth, "1", query).catch((e) => {
-          // Some servers reject <expand>: retry with plain calendar-data.
-          if (e instanceof AuthError) throw e;
-          statuses.push((e as Error).message);
-          return dav(href, "REPORT", auth, "1", query.replace(/<c:expand[^>]*\/>/, ""));
-        }),
-      ),
-    );
-    const blocks = reports.flatMap((r) => all(r.xml, "calendar-data"));
-    const items = blocks.flatMap((d) => parseEvents(decode(d.trim())));
+    // Naver answers calendar-query with hrefs but no calendar-data, so fall back to GETting each event (D22).
+    const fetchCalendar = async (href: string) => {
+      const r = await dav(href, "REPORT", auth, "1", query).catch((e) => {
+        if (e instanceof AuthError) throw e;
+        return dav(href, "REPORT", auth, "1", query.replace(/<c:expand[^>]*\/>/, "")); // server rejected <expand>
+      });
+      let data = all(r.xml, "calendar-data").map((d) => decode(d.trim())).filter(Boolean);
+      let path = "report";
+      if (!data.length) {
+        const hrefs = all(r.xml, "response")
+          .map((x) => decode((first(x, "href") ?? "").trim()))
+          .filter((h) => h && !h.endsWith("/"));
+        data = (
+          await Promise.all(
+            hrefs.slice(0, 100).map((h) =>
+              dav(h, "GET", auth, "0", "").then(
+                (x) => x.xml,
+                (e) => {
+                  if (e instanceof AuthError) throw e;
+                  return "";
+                },
+              ),
+            ),
+          )
+        ).filter(Boolean);
+        path = hrefs.length ? "get" : "empty";
+      }
+      const tags = [...new Set([...r.xml.matchAll(/<(?:[\w-]+:)?([\w-]+)/g)].map((m) => m[1]))];
+      return { data, path, tags };
+    };
+    const results = await Promise.all(calendars.map(fetchCalendar));
+    const window = { start: Date.parse(timeMin), end: Date.parse(timeMax), tz: typeof tz === "string" && tz.length <= 64 ? tz : "Asia/Seoul" };
+    const items = results.flatMap((r) => r.data.flatMap((d) => parseEvents(d, window)));
     console.log(
       "naver caldav",
       JSON.stringify({
-        principal: !!principal,
-        home: !!home,
-        responses: responses.length,
-        resourcetypes: [...new Set(responses.map((r) => (first(r, "resourcetype") ?? "").match(/<[\w:-]+/g)?.join(" ") ?? ""))],
         calendars: calendars.length,
-        retried: statuses,
-        reportBytes: reports.map((r) => r.xml.length),
-        blocks: blocks.length,
+        paths: results.map((r) => `${r.path}:${r.data.length}`),
+        tags: [...new Set(results.flatMap((r) => r.tags))],
         items: items.length,
       }),
     );

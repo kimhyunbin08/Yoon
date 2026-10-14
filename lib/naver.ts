@@ -38,6 +38,7 @@ async function fetchToday(id: string, password: string): Promise<CalItem[]> {
       password,
       timeMin: new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString(),
       timeMax: new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).toISOString(),
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone, // for floating and all-day events
     }),
   });
   if (res.status === 401) throw new Error("AUTH");
