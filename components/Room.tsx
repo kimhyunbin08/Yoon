@@ -2,7 +2,7 @@
 import { memo, useId, type ReactNode } from "react";
 import { ITEM_BY_ID, type ItemId, type SkyPhase, type Slot, type WindowView } from "../content/catalog";
 import { ITEM_ART } from "./art/items";
-import { OVER } from "./art/shared";
+import { BackLegs, DeskLeg, DeskTop, OVER } from "./art/shared";
 
 // Stage is 1440x900 and always fits whole ("meet"); the wall, floor, baseboard, and floor lines are
 // overscanned (OVER) so any leftover space continues the room instead of showing bars (SPEC §4.3, D18).
@@ -203,11 +203,12 @@ function Merged({ children }: { children: ReactNode }) {
 function BaseDesk() {
   return (
     <g>
-      <rect x="250" y="676" width="28" height="224" fill={v("desk-d")} />
-      <rect x="1162" y="676" width="28" height="224" fill={v("desk-d")} />
-      <rect x="226" y="624" width="988" height="54" rx="6" fill={v("desk-d")} />
-      <rect x="640" y="646" width="160" height="10" rx="5" fill={v("desk")} />
-      <rect x="200" y="600" width="1040" height="28" rx="10" fill={v("desk")} />
+      <BackLegs />
+      <DeskLeg x={236} top={662} bottom={900} side={1} />
+      <DeskLeg x={1176} top={662} bottom={900} side={-1} />
+      <rect x="214" y="662" width="1012" height="40" fill={v("desk-d")} />
+      <rect x="640" y="674" width="160" height="12" rx="6" fill={v("desk")} />
+      <DeskTop />
     </g>
   );
 }

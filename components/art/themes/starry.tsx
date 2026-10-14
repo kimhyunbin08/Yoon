@@ -1,7 +1,7 @@
 "use client";
 import { useId, type ComponentType } from "react";
 import type { ItemId } from "../../../content/catalog";
-import { INK, WallPattern, v } from "../shared";
+import { DeskTop, INK, v, WallPattern } from "../shared";
 
 // 별밤 도서관 (starry-library): stars, jars, and old wood. Pre-v5 items (curtains, garland, candle & books, moon clock) live in items.tsx.
 
@@ -39,22 +39,27 @@ function StarJars() {
 }
 
 function LibraryDesk() {
+  // Two drawer pedestals drawn as boxes: front face plus the side face turned toward the middle.
   return (
     <g>
-      {[220, 1020].map((x) => (
+      <rect x="420" y="662" width="600" height="40" fill={v("wall-d")} />
+      {[
+        [214, 1],
+        [1026, -1],
+      ].map(([x, side]) => (
         <g key={x}>
-          <rect x={x} y="628" width="200" height="272" fill={v("desk-d")} />
-          {[648, 732, 816].map((y) => (
+          <path d={`M${side === 1 ? x + 200 : x} 662 L${side === 1 ? x + 214 : x - 14} 648 V884 L${side === 1 ? x + 200 : x} 900 Z`} fill={v("wall-d")} />
+          <rect x={x} y="662" width="200" height="238" fill={v("desk-d")} />
+          {[674, 750, 826].map((y) => (
             <g key={y}>
-              <rect x={x + 14} y={y} width="172" height="70" rx="4" fill={v("desk")} />
-              <rect x={x + 84} y={y + 30} width="32" height="8" rx="4" fill={v("white")} />
+              <rect x={x + 14} y={y} width="172" height="64" rx="4" fill={v("desk")} />
+              <rect x={x + 84} y={y + 28} width="32" height="8" rx="4" fill={v("white")} />
             </g>
           ))}
         </g>
       ))}
-      <rect x="420" y="628" width="600" height="40" fill={v("desk-d")} />
-      <rect x="196" y="596" width="1048" height="32" rx="6" fill={v("desk")} />
-      <path d="M210 606 H1230" stroke={INK} strokeWidth="1" opacity="0.4" />
+      <DeskTop thickness={28} />
+      <path d="M250 614 H1190" stroke={INK} strokeWidth="1" opacity="0.4" />
     </g>
   );
 }

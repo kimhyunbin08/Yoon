@@ -1,7 +1,7 @@
 "use client";
 import type { ComponentType } from "react";
 import type { ItemId } from "../../../content/catalog";
-import { CalendarFace, INK, Tube, v } from "../shared";
+import { BackLegs, CalendarFace, DeskTop, INK, Tube, v } from "../shared";
 
 // 노을 고양이 (sunset-cat): dots, paws, and yarn. Pre-v5 items (sleeping cat, poster, books) live in items.tsx.
 
@@ -20,25 +20,27 @@ function CatCalendar() {
 function PawDesk() {
   return (
     <g>
+      <BackLegs />
       {/* rounded legs ending in paws */}
-      {[256, 1176].map((x) => (
+      {[[250, 1], [1190, -1]].map(([x, side]) => (
         <g key={x}>
-          <rect x={x - 14} y="640" width="28" height="244" rx="12" fill={v("desk-d")} />
+          <path d={`M${x + 14 * side} 700 L${x + 22 * side} 692 V868 L${x + 14 * side} 876 Z`} fill={v("wall-d")} />
+          <rect x={x - 14} y="662" width="28" height="222" rx="12" fill={v("desk-d")} />
           <ellipse cx={x} cy="888" rx="22" ry="12" fill={v("white")} />
           <path d={`M${x - 8} 882 V894 M${x} 880 V896 M${x + 8} 882 V894`} stroke={INK} strokeWidth="1" />
         </g>
       ))}
-      <rect x="226" y="624" width="988" height="58" rx="10" fill={v("desk-d")} />
+      <rect x="214" y="662" width="1012" height="56" rx="8" fill={v("desk-d")} />
       {[480, 960].map((cx) => (
         <g key={cx}>
-          <rect x={cx - 110} y="634" width="220" height="38" rx="8" fill={v("desk")} />
-          <circle cx={cx} cy="656" r="9" fill={v("white")} />
+          <rect x={cx - 110} y="670" width="220" height="40" rx="8" fill={v("desk")} />
+          <circle cx={cx} cy="694" r="9" fill={v("white")} />
           {[-10, -3.5, 3.5, 10].map((dx, i) => (
-            <circle key={dx} cx={cx + dx} cy={i === 0 || i === 3 ? 643 : 640} r="3" fill={v("white")} />
+            <circle key={dx} cx={cx + dx} cy={i === 0 || i === 3 ? 681 : 678} r="3" fill={v("white")} />
           ))}
         </g>
       ))}
-      <rect x="200" y="600" width="1040" height="28" rx="14" fill={v("desk")} />
+      <DeskTop />
     </g>
   );
 }

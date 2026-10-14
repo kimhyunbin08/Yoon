@@ -1,7 +1,7 @@
 "use client";
 import type { ComponentType } from "react";
 import type { ItemId } from "../../../content/catalog";
-import { CalendarFace, INK, Tube, v } from "../shared";
+import { CalendarFace, DeskTop, INK, Tube, v } from "../shared";
 
 // 햇살 카페 (sunny-cafe): stripes, brass, and coffee. Pre-v5 items (latte & cake, pendant, menu board) live in items.tsx.
 
@@ -57,15 +57,17 @@ function CoffeeJars() {
 function CafeTable() {
   return (
     <g>
+      {/* two pedestals: a column with a side face, and a round foot seen from above */}
       {[392, 1048].map((x) => (
         <g key={x}>
-          <rect x={x - 12} y="628" width="24" height="250" fill={v("desk-d")} />
-          <path d={`M${x - 70} 900 Q${x} 860 ${x + 70} 900 Z`} fill={v("desk-d")} />
+          <ellipse cx={x} cy="884" rx="72" ry="14" fill={v("desk-d")} />
+          <path d={`M${x + 12} 676 L${x + 20} 668 V870 L${x + 12} 878 Z`} fill={v("wall-d")} />
+          <rect x={x - 12} y="662" width="24" height="216" fill={v("desk-d")} />
         </g>
       ))}
-      <rect x="226" y="624" width="988" height="22" rx="4" fill={v("desk-d")} />
-      <rect x="200" y="600" width="1040" height="28" rx="14" fill={v("desk")} />
-      <path d="M260 612 Q420 606 520 616 M820 608 Q980 618 1160 610" stroke={INK} strokeWidth="1" fill="none" opacity="0.35" />
+      <rect x="214" y="662" width="1012" height="14" fill={v("desk-d")} />
+      <DeskTop />
+      <path d="M300 612 Q460 606 560 616 M840 608 Q1000 618 1150 610" stroke={INK} strokeWidth="1" fill="none" opacity="0.35" />
     </g>
   );
 }

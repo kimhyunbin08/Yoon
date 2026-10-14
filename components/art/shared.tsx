@@ -62,3 +62,41 @@ export function WallPattern({ id, size, children }: { id: string; size: number; 
     </>
   );
 }
+
+// ---------- desks: 2D with depth (SPEC §4.3, D19) ----------
+// One shared tabletop seen slightly from above: back edge y=600 (where desk objects stand), front edge y=640.
+// Depth comes only from paper tones: top = desk, front faces = desk-d, side faces = wall-d.
+
+/** The shared tabletop: slanted end faces, top surface, front thickness. */
+export function DeskTop({ thickness = 22 }: { thickness?: number }) {
+  return (
+    <g>
+      <path d={`M190 640 L230 600 V${600 + thickness} L190 ${640 + thickness} Z`} fill={v("wall-d")} />
+      <path d={`M1250 640 L1210 600 V${600 + thickness} L1250 ${640 + thickness} Z`} fill={v("wall-d")} />
+      <path d="M230 600 H1210 L1250 640 H190 Z" fill={v("desk")} />
+      <rect x="190" y="640" width="1060" height={thickness} fill={v("desk-d")} />
+    </g>
+  );
+}
+
+/** A square leg: front face plus the side face that turns toward the room's center (side 1 = right, -1 = left). */
+export function DeskLeg({ x, top, bottom, w = 28, side }: { x: number; top: number; bottom: number; w?: number; side: 1 | -1 }) {
+  const d = 10; // visible side depth
+  const edge = side === 1 ? x + w : x;
+  return (
+    <g>
+      <path d={`M${edge} ${top} L${edge + d * side} ${top - d} V${bottom - d} L${edge} ${bottom} Z`} fill={v("wall-d")} />
+      <rect x={x} y={top} width={w} height={bottom - top} fill={v("desk-d")} />
+    </g>
+  );
+}
+
+/** Back legs sit further away, so they stop higher on the floor. */
+export function BackLegs({ left = 272, right = 1146, w = 22, top = 622, bottom = 858 }: { left?: number; right?: number; w?: number; top?: number; bottom?: number }) {
+  return (
+    <g>
+      <rect x={left} y={top} width={w} height={bottom - top} fill={v("wall-d")} />
+      <rect x={right} y={top} width={w} height={bottom - top} fill={v("wall-d")} />
+    </g>
+  );
+}
