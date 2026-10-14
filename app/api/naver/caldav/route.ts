@@ -1,5 +1,6 @@
 // Reads today's Naver Calendar events over CalDAV (SPEC §3.2, D22).
 // Stateless: the id and app password come with each request and are never stored or logged.
+// One log line per request carries only counts, status codes, and tag names (no ids, hrefs, or event text).
 // Only talks to caldav.calendar.naver.com (no open proxy).
 import { parseEvents } from "../../../../lib/ical";
 
@@ -61,19 +62,47 @@ export async function POST(req: Request) {
     const home = first(first(p.xml, "calendar-home-set") ?? "", "href");
     const homeUrl = home ? new URL(decode(home.trim()), ROOT).href : p.url;
     const list = await dav(homeUrl, "PROPFIND", auth, "1", propfind("<d:resourcetype/>"));
-    const calendars = all(list.xml, "response")
-      .filter((r) => /<(?:[\w-]+:)?calendar\s*\/>/.test(first(r, "resourcetype") ?? ""))
+    const responses = all(list.xml, "response");
+    // `<cal:calendar xmlns:cal="…"/>`, `<C:calendar/>`, or `<calendar></calendar>`; not calendar-home-set etc.
+    const calendars = responses
+      .filter((r) => /<(?:[\w-]+:)?calendar[\s/>]/.test(first(r, "resourcetype") ?? ""))
       .map((r) => decode((first(r, "href") ?? "").trim()))
       .filter(Boolean);
 
     const start = davTime(timeMin);
     const end = davTime(timeMax);
     const query = `<?xml version="1.0"?><c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"><d:prop><c:calendar-data><c:expand start="${start}" end="${end}"/></c:calendar-data></d:prop><c:filter><c:comp-filter name="VCALENDAR"><c:comp-filter name="VEVENT"><c:time-range start="${start}" end="${end}"/></c:comp-filter></c:comp-filter></c:filter></c:calendar-query>`;
-    const reports = await Promise.all(calendars.map((href) => dav(href, "REPORT", auth, "1", query)));
-    const items = reports.flatMap((r) => all(r.xml, "calendar-data").flatMap((d) => parseEvents(decode(d.trim()))));
+    const statuses: string[] = [];
+    const reports = await Promise.all(
+      calendars.map((href) =>
+        dav(href, "REPORT", auth, "1", query).catch((e) => {
+          // Some servers reject <expand>: retry with plain calendar-data.
+          if (e instanceof AuthError) throw e;
+          statuses.push((e as Error).message);
+          return dav(href, "REPORT", auth, "1", query.replace(/<c:expand[^>]*\/>/, ""));
+        }),
+      ),
+    );
+    const blocks = reports.flatMap((r) => all(r.xml, "calendar-data"));
+    const items = blocks.flatMap((d) => parseEvents(decode(d.trim())));
+    console.log(
+      "naver caldav",
+      JSON.stringify({
+        principal: !!principal,
+        home: !!home,
+        responses: responses.length,
+        resourcetypes: [...new Set(responses.map((r) => (first(r, "resourcetype") ?? "").match(/<[\w:-]+/g)?.join(" ") ?? ""))],
+        calendars: calendars.length,
+        retried: statuses,
+        reportBytes: reports.map((r) => r.xml.length),
+        blocks: blocks.length,
+        items: items.length,
+      }),
+    );
     return Response.json({ items });
   } catch (e) {
     if (e instanceof AuthError) return Response.json({ error: "auth" }, { status: 401 });
+    console.log("naver caldav failed", (e as Error).message);
     return Response.json({ error: "caldav_failed" }, { status: 502 });
   }
 }
