@@ -2,7 +2,7 @@
 
 Source: user interview (2026-10).
 Status: v0.11 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
-Sections: 1 Ideation · 2 PRD · 3 TRD · 4 Design Spec · 5 Open Questions · 6 Market Research & Decisions. Agent instructions live in `AGENTS.md`.
+Sections: 1 Ideation · 2 PRD · 3 TRD · 4 Design Spec · 5 Open Questions · 6 Market Research & Decisions · 7 Next Development Steps (planned, not built). Agent instructions live in `AGENTS.md`.
 
 Platform decision: **laptop only** (desktop browser, landscape). No phone, no tablet, no sync.
 
@@ -299,3 +299,49 @@ Research on variable rewards: variable-ratio schedules drive the most consistent
 Taste call to revisit after a week of real use: if themes still go too fast, raise recipes rather than shrinking drops (bigger drops are the fun part).
 
 Sources: [Study Bunny listing](https://gridfiti.com/?p=17933), [Forest on the App Store](https://apps.apple.com/au/app/forest-focus-for-productivity/id866450515), [Focus Friend on the App Store](https://apps.apple.com/US/app/id6742278016), [Focus Friend coverage](https://blog.washcoll.edu/wordpress/theelm/2025/09/new-focus-friend-study-app-by-hank-green-explodes-in-popularity/), [Spirit City on Steam](https://store.steampowered.com/app/2113850/), [Spirit City coverage](https://www.tubefilter.com/2024/03/07/spirit-city-lofi-girl-sessions-focus-game/), [열품타 on the App Store](https://apps.apple.com/kr/app/%EC%97%B4%EC%A0%95%ED%92%88%EC%9D%80-%ED%83%80%EC%9D%B4%EB%A8%B8/id1441909643), [Variable rewards](https://concepts.dsebastien.net/concept/variable-rewards/).
+
+---
+
+## 7. Next Development Steps (planned, not built)
+
+Captured 2026-10-14 from the user: the wall board (today the 햇살 카페 menu board) could show a to-do list or a real Google Calendar, so the room becomes a screen she actually works from, not only a backdrop.
+
+### 7.1 Goal
+Turn a wall surface into a **live board** that shows today's to-dos and today's calendar, drawn in the room's pencil style. The room stays calm (§1.3): no reminders, no badges, no notifications. It is something to glance at, like a real corkboard.
+
+### 7.2 Step A — To-do board (local, no accounts)
+- **Where:** a new base fixture, a pencil-drawn cork board on the right wall, always present. It does not use a theme slot, so themes keep decorating and the board never disappears. (Open question Q7.1.)
+- **In the room:** up to 5 open to-dos as handwritten-style lines (SVG `<text>`, Pretendard), done ones struck through for the rest of the day. If there are more, show "+3".
+- **Editing:** click the board or press `5` → a right drawer like the other panels: add (Enter), check off, edit, delete, drag to reorder. Keyboard first.
+- **Rules:** done items clear at local midnight (kept in history for Records later). No due times, no alarms.
+- **State:** v5 adds `todos: { id; text; done; createdAt; doneAt | null; order }[]` (max 50, text ≤ 80 chars). Migration fills `[]`. Included in JSON backup.
+- **Tests:** pure helpers in `lib/game.ts`-style module (`lib/todos.ts`): add/toggle/reorder/clear-at-midnight, migration v4 → v5; e2e: add, check, reload, persists.
+- **Effort:** human ~1 day / CC ~1 hour.
+
+### 7.3 Step B — Google Calendar on the board (read-only)
+Show today's events (time + title, next event highlighted) under the to-dos. Read-only: StillRoom never writes to her calendar.
+
+Two ways to get the data; pick one before building (Q7.2):
+
+| | B1. Google sign-in (OAuth, browser only) | B2. Secret iCal address (recommended for one user) |
+|---|---|---|
+| How | Google Identity Services token client in the PWA, scope `calendar.events.readonly`, Calendar API `events.list` for today | She pastes her calendar's "Secret address in iCal format" once; a tiny Vercel Function fetches and parses it (calendar.google.com does not send CORS headers, so the browser can't fetch it directly) |
+| Setup | Google Cloud project, OAuth client, consent screen, her account as test user | Copy one URL from Google Calendar settings |
+| Daily use | Access tokens are short-lived and renewing needs a click; in Testing mode consent also lapses after 7 days. Bad fit for an app left open all day. | Works unattended; refresh every 15 min while open |
+| Warnings | "Unverified app" screen until sensitive-scope verification | None |
+| Security | Token in memory only | The secret URL is a credential: stored only in her browser (IndexedDB), sent to our function per request, never logged or stored server-side; she can reset it in Google Calendar anytime |
+| Backend | None | One stateless function (`app/api/ical/route.ts` → requires leaving pure static export or a separate function) |
+
+- **Architecture impact (B2):** today the app is `output: "export"` with no server. B2 needs one serverless route; switch to the default Next.js build on Vercel (pages stay static, one Node function). Update §3.1 and AGENTS.md when built.
+- **Board rendering:** times in the room's pencil style; the current event gets the window-light color (`--light`) as its only accent, consistent with "color only from light".
+- **Failure states:** offline → last fetched agenda with "마지막 업데이트 14:20"; bad/expired URL or revoked token → board shows "캘린더 다시 연결" in place of events; never a modal.
+- **Tests:** iCal parsing (recurring events, all-day, time zones, today-only filter) as unit tests with fixture `.ics` files; function returns 400 on non-Google hosts (no open proxy).
+- **Effort:** B2 human ~2 days / CC ~2 hours; B1 similar code but more console setup.
+
+### 7.4 Open questions for these steps
+- **Q7.1** Board placement: a new always-present cork board (recommended), or let the existing wall items (menu board, neon sign) show the content when placed?
+- **Q7.2** Calendar source: B2 secret iCal (recommended for a single user, no re-login) or B1 Google sign-in?
+- **Q7.3** Which calendars: primary only, or let her pick several?
+- **Q7.4** Should finished to-dos count toward anything (e.g., a bonus piece)? Default no: rewards stay tied to study time only.
+
+Sources: [Use the token model](https://developers.google.com/identity/oauth2/web/guides/use-token-model), [Choose Google Calendar API scopes](https://developers.google.com/workspace/calendar/api/auth), [Sensitive scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification), [Manage App Audience](https://support.google.com/cloud/answer/15549945?hl=en).
