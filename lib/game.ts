@@ -14,11 +14,11 @@ import {
   type TimeWindow,
 } from "../content/catalog";
 
-export const BLOCK_MS = 5 * 60_000; // one drop per 5 focused minutes
-export const COUNT_WEIGHTS = [0.1, 0.2, 0.4, 0.2, 0.1]; // P(1..5 pieces per drop), 3 most common
+const BLOCK_MS = 5 * 60_000; // one drop per 5 focused minutes
+const COUNT_WEIGHTS = [0.1, 0.2, 0.4, 0.2, 0.1]; // P(1..5 pieces per drop), 3 most common
 const V1_BLOCK_MS = 30 * 60_000;
 
-export type Segment = { start: number; end: number | null };
+type Segment = { start: number; end: number | null };
 export type Timer = { segments: Segment[]; blocksAwarded: number; piecesEarned: number }; // piecesEarned: this session
 export type State = {
   version: 7;
@@ -79,7 +79,7 @@ export function dayKey(ts: number): string {
 }
 
 /** Adds [start, end) to the daily totals, split at local midnights. */
-export function addSpan(daily: Record<string, number>, start: number, end: number): Record<string, number> {
+function addSpan(daily: Record<string, number>, start: number, end: number): Record<string, number> {
   const out = { ...daily };
   for (let t = start; t < end; ) {
     const d = new Date(t);
@@ -108,12 +108,12 @@ export function focusedMs(t: Timer, now: number): number {
   return t.segments.reduce((sum, s) => sum + Math.max(0, (s.end ?? now) - s.start), 0);
 }
 
-export function pendingBlocks(s: State, now: number): number {
+function pendingBlocks(s: State, now: number): number {
   return Math.floor((s.carryMs + focusedMs(s.timer, now)) / BLOCK_MS) - s.timer.blocksAwarded;
 }
 
 /** Wall-clock time at which block k (1-based, counted in this session) completed. */
-export function blockCompletedAt(s: State, k: number, now: number): number {
+function blockCompletedAt(s: State, k: number, now: number): number {
   let need = k * BLOCK_MS - s.carryMs;
   // Fully covered by carried-over time (e.g. after a migration): it completes at session start, or now if idle.
   if (need <= 0) return s.timer.segments[0]?.start ?? now;

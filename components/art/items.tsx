@@ -114,7 +114,7 @@ function CatCushion() {
 function LatteCake() {
   return (
     <g>
-      <path className="anim-steam" d="M350 520c-6-8 6-12 0-20M372 520c-6-8 6-12 0-20" stroke={v("white")} strokeWidth="4" strokeLinecap="round" fill="none" />
+      <path d="M350 520c-6-8 6-12 0-20M372 520c-6-8 6-12 0-20" stroke={v("white")} strokeWidth="4" strokeLinecap="round" fill="none" />
       <ellipse cx="364" cy="600" rx="58" ry="8" fill={v("cream")} />
       <path d="M326 536h76v40a20 20 0 0 1-20 20h-36a20 20 0 0 1-20-20Z" fill={v("white")} />
       <path d="M402 548h6a14 14 0 0 1 0 28h-6" stroke={v("white")} strokeWidth="9" fill="none" />
@@ -139,7 +139,7 @@ function CandleBooks() {
       <rect x="300" y="584" width="210" height="4" fill={v("cream")} opacity="0.7" />
       <rect x="382" y="478" width="36" height="56" rx="6" fill={v("cream")} />
       <path d="M388 478v12" stroke={v("white")} strokeWidth="5" strokeLinecap="round" />
-      <path className="anim-flicker" d="M400 438c10 12 10 24 0 30-10-6-10-18 0-30Z" fill={v("yellow-d")} />
+      <path d="M400 438c10 12 10 24 0 30-10-6-10-18 0-30Z" fill={v("yellow-d")} />
       <path d="M400 452c4 6 4 10 0 14-4-4-4-8 0-14Z" fill={v("cream")} />
     </g>
   );
@@ -213,7 +213,7 @@ function SunsetPoster() {
   );
 }
 
-export function ClockHands({ cx, cy, r }: { cx: number; cy: number; r: number }) {
+function ClockHands({ cx, cy, r }: { cx: number; cy: number; r: number }) {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 30_000);

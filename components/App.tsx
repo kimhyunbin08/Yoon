@@ -30,9 +30,9 @@ export default function App() {
     panelRef.current = panel;
   }, [panel]);
 
-  const toast = useCallback((text: string, tone?: Toast["tone"]) => {
+  const toast = useCallback((text: string) => {
     const id = Math.random();
-    setToasts((t) => [...t.slice(-3), { id, text, tone }]);
+    setToasts((t) => [...t.slice(-3), { id, text }]);
     setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), 3000);
   }, []);
 
@@ -91,7 +91,7 @@ export default function App() {
       try {
         const next = game.applyTheme(game.unlock(store.get(), id), id);
         store.set(next);
-        toast(`'${THEME_BY_ID[id].nameKo}' 테마를 열었어요`, "special");
+        toast(`'${THEME_BY_ID[id].nameKo}' 테마를 열었어요`);
         if (next.unlockedThemes.length % 3 === 0) toast("방을 지키려면 기록에서 백업해두세요");
       } catch {
         toast("조각이 부족해요");

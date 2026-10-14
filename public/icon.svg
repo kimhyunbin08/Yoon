@@ -1,15 +1,24 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#f4e9e1"/>
-  <rect x="112" y="80" width="288" height="272" rx="28" fill="#ffffff"/>
-  <rect x="132" y="100" width="248" height="232" rx="16" fill="#cfe4f7"/>
-  <circle cx="200" cy="170" r="26" fill="#fbe7a1"/>
-  <path d="M286 332 L298 170 L316 170 L328 332Z" fill="#f7f1ff"/>
-  <path d="M316 170 L328 332 L338 332 L322 170Z" fill="#d9cfee"/>
-  <path d="M292 170 L310 128 L328 170Z" fill="#cbbef0"/>
-  <circle cx="160" cy="320" r="40" fill="#ffffff"/>
-  <circle cx="240" cy="326" r="48" fill="#ffffff"/>
-  <circle cx="340" cy="320" r="44" fill="#ffffff"/>
-  <rect x="251" y="100" width="10" height="232" fill="#ffffff"/>
-  <rect x="64" y="384" width="384" height="32" rx="14" fill="#f1d3b3"/>
-  <rect x="88" y="416" width="336" height="40" rx="8" fill="#dcb38c"/>
+  <!-- StillRoom: a white pencil-drawn window onto an evening sky, over a desk -->
+  <rect width="512" height="512" rx="112" fill="#fdfcfa"/>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffd59e"/>
+      <stop offset="1" stop-color="#ffb08a"/>
+    </linearGradient>
+    <clipPath id="glass"><rect x="132" y="100" width="248" height="232" rx="16"/></clipPath>
+  </defs>
+  <g stroke="#5b5866" stroke-width="7" stroke-linejoin="round" stroke-linecap="round">
+    <rect x="112" y="80" width="288" height="272" rx="28" fill="#ffffff"/>
+    <g clip-path="url(#glass)">
+      <rect x="132" y="100" width="248" height="232" fill="url(#sky)" stroke="none"/>
+      <circle cx="210" cy="250" r="34" fill="#ff8a5c"/>
+      <path d="M120 270 C170 236 220 236 262 262 C300 244 344 240 392 260 V340 H120 Z" fill="#ffffff"/>
+      <path d="M150 165 a16 16 0 0 1 30 -8 a20 20 0 0 1 36 10 a12 12 0 0 1 2 24 h-62 a13 13 0 0 1 -6 -26 z" fill="#ffffff"/>
+    </g>
+    <rect x="132" y="100" width="248" height="232" rx="16" fill="none"/>
+    <path d="M256 100 V332 M132 216 H380"/>
+    <rect x="64" y="384" width="384" height="30" rx="12" fill="#ffffff"/>
+    <rect x="88" y="414" width="336" height="36" rx="6" fill="#f3f1ed"/>
+  </g>
 </svg>

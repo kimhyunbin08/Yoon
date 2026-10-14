@@ -23,7 +23,7 @@ export function fmtDuration(ms: number) {
   return m === 0 ? `${h}시간` : `${h}시간 ${m}분`;
 }
 
-export function fmtClock(ms: number) {
+function fmtClock(ms: number) {
   const s = Math.floor(ms / 1000);
   return [Math.floor(s / 3600), Math.floor(s / 60) % 60, s % 60].map((n) => String(n).padStart(2, "0")).join(":");
 }
@@ -131,7 +131,7 @@ export function Controls({
 }
 
 export type PanelId = "pieces" | "themes" | "decorate" | "records";
-export const MENU: { id: PanelId; label: string }[] = [
+const MENU: { id: PanelId; label: string }[] = [
   { id: "pieces", label: "조각함" },
   { id: "themes", label: "테마" },
   { id: "decorate", label: "꾸미기" },
@@ -161,7 +161,7 @@ export function Menu({ active, onOpen }: { active: PanelId | null; onOpen: (p: P
   );
 }
 
-export type Toast = { id: number; text: string; tone?: "rare" | "special" };
+export type Toast = { id: number; text: string };
 
 export function Toasts({ items }: { items: Toast[] }) {
   return (
@@ -169,9 +169,7 @@ export function Toasts({ items }: { items: Toast[] }) {
       {items.map((t) => (
         <p
           key={t.id}
-          className={`anim-toast rounded-full bg-surface px-4 py-2 text-sm shadow-[0_4px_16px_rgb(59_58_69/0.08)] backdrop-blur ${
-            t.tone === "special" ? "ring-2 ring-special" : t.tone === "rare" ? "ring-2 ring-rare" : ""
-          }`}
+          className="anim-toast rounded-full bg-surface px-4 py-2 text-sm shadow-[0_4px_16px_rgb(59_58_69/0.08)] backdrop-blur"
         >
           {t.text}
         </p>

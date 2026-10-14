@@ -19,7 +19,7 @@ export function Tube({ d, width = 6 }: { d: string; width?: number }) {
 }
 
 /** Today's date, refreshed every minute so calendars turn over at midnight. */
-export function useToday() {
+function useToday() {
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const id = setInterval(() => setNow(new Date()), 60_000);

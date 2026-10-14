@@ -11,7 +11,7 @@ import { BackLegs, DeskLeg, DeskTop, OVER } from "./art/shared";
 const v = (name: string) => `var(--c-${name})`;
 
 /** Where each slot's item lives; used for the decorate highlight and click targets. */
-export const SLOT_RECTS: Record<Slot, [number, number, number, number]> = {
+const SLOT_RECTS: Record<Slot, [number, number, number, number]> = {
   wallpaper: [0, 0, 1440, 706],
   windowCover: [466, 74, 508, 456],
   windowView: [522, 118, 396, 364],

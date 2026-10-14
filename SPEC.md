@@ -1,7 +1,7 @@
 # StillRoom — Product Spec
 
 Source: user interview (2026-10).
-Status: v0.17 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
+Status: v0.18 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
 Sections: 1 Ideation · 2 PRD · 3 TRD · 4 Design Spec · 5 Open Questions · 6 Market Research & Decisions · 7 Next Development Steps (planned, not built). Agent instructions live in `AGENTS.md`.
 
 Platform decision: **laptop only** (desktop browser, landscape). No phone, no tablet, no sync.
@@ -128,7 +128,7 @@ Why no Supabase: one user, one laptop, no competition to protect. A backend adds
 │      │          │                            │
 │      ▼          ▼                            │
 │   lib/game.ts (pure functions: blocks,       │
-│               window, roll, pity, unlock)    │
+│               window, drops, unlock)         │
 │      │                                       │
 │      ▼                                       │
 │   lib/store.ts ── IndexedDB (state v1)       │
@@ -173,7 +173,7 @@ type State = {
 - State migration: `version` field; `migrate()` runs on load.
 
 ### 3.6 Tests
-- Vitest for `lib/game.ts`: focused time with pauses, block assignment across window boundaries and midnight, pity, unlock success/failure, migration.
+- Vitest for `lib/game.ts`: focused time with pauses, block assignment across window boundaries and midnight, drop counts and window pieces, unlock success/failure, slot placement, migration v1→v7.
 - One Playwright smoke with a fake clock: start timer, advance 15 min, see pieces, import a backup, unlock a theme, reload, state persists.
 
 ---
@@ -194,9 +194,7 @@ Pastel, soft, quiet. A front-facing study room: desk in the foreground, window s
 | `--ring` | `#A38B5B` deep ivory (focus ring, decorate slot outline; ≥ 3:1 on white) | `#E3D3B0` |
 | `--accent-pink` | `#F6C1CF` | `#E8A9BA` |
 | `--accent-mint` | `#BDE5D3` | `#9FD1BC` |
-| `--accent-peach` | `#FFD6B8` | `#E9BB98` |
-| `--rare` | `#9EC5F2` | same |
-| `--special` | `#F2C97E` | same |
+| `--piece-dawn` / `-day` / `-evening` / `-night` | `#FFD6E2` / `#FFF0B8` / `#FFD2B0` / `#DDD8FF` (one facet of each piece icon) | same |
 
 Text on pastel fills uses `--text`, never white (contrast ≥ 4.5:1). Font: Pretendard, sizes 12/14/16/20/28/48. Timer: tabular numerals. Radius 16 for cards, 999 for buttons. Shadow `0 4px 16px rgb(59 58 69 / 0.08)`.
 
@@ -235,7 +233,7 @@ Text on pastel fills uses `--text`, never white (contrast ≥ 4.5:1). Font: Pret
 - After 8 s without input, all UI fades out except a small timer pill (top right) and today's total. Any mouse move or key press brings UI back. Cursor hides in ambient mode.
 - Full screen button and `F` key. Wake Lock API keeps the screen on while the timer runs.
 - Keyboard: `Space` start/pause, `F` full screen, `Esc` exit full screen/close sheets, `1–4` open menu sections.
-- New pieces: one 3 s quiet toast per drop ("새벽 조각 3개 · 이슬 ×2, 참새 깃털"). Catch-up after the app was closed collapses into one toast. No sound, no modal.
+- New pieces: one 3 s quiet toast per drop ("노을의 조각 3개를 얻었어요"). Catch-up after the app was closed collapses into one toast. No sound, no modal.
 
 ### 4.5 Screens
 | Screen | Content | Primary action |
@@ -252,13 +250,13 @@ Navigation: everything is one page; panels open over the room. Small floating me
 | State | Treatment |
 |---|---|
 | First run | Bare room (desk + window). One line: "5분마다 조각이 1~5개 나와요". |
-| Empty pieces | Silhouettes + "공부하면 조각이 모여요". |
-| Theme not affordable | Missing pieces listed with the window they drop in. |
+| Empty pieces | The four piece cards show 0 and their drop hours. |
+| Theme not affordable | Missing pieces listed by name and count ("부족: 새벽의 조각 48개"). |
 | Storage unavailable (private mode) | Banner "이 모드에서는 기록이 저장되지 않아요". |
 | Import failed | Toast "백업 파일을 읽을 수 없어요"; current state untouched. |
 
 ### 4.7 Motion and accessibility
-- Window sky cross-fades over 2 s on window change. Lamp glow and steam loop subtly (4 s); all loops off under `prefers-reduced-motion`.
+- Window sky and pencil ink cross-fade over 2 s on a phase change. Nothing in the room animates: a filtered group would repaint every frame, so the art has no loops (the old steam and flame loops were removed in v0.18). `prefers-reduced-motion` also turns off the sky cross-fade and toast motion.
 - Theme unlock: 600 ms soft reveal of the items into their slots.
 - Click targets ≥ 32 px, visible focus ring on all controls. Alt text from `nameKo` on every piece and item.
 
