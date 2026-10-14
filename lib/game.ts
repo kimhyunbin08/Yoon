@@ -2,15 +2,12 @@
 import {
   ITEMS,
   ITEM_BY_ID,
-  PIECES,
   SKY_PHASES,
-  THEMES,
   THEME_BY_ID,
   WINDOWS,
   WINDOW_INFO,
   type ItemId,
   type PieceId,
-  type Rarity,
   type SkyPhase,
   type Slot,
   type ThemeId,
@@ -19,34 +16,31 @@ import {
 
 export const BLOCK_MS = 5 * 60_000; // one drop per 5 focused minutes
 export const COUNT_WEIGHTS = [0.1, 0.2, 0.4, 0.2, 0.1]; // P(1..5 pieces per drop), 3 most common
-export const PITY_AFTER = 8; // consecutive commons before a guaranteed rare
-export const ODDS = { special: 0.05, rare: 0.25 }; // common = remainder
 const V1_BLOCK_MS = 30 * 60_000;
 
 export type Segment = { start: number; end: number | null };
 export type Timer = { segments: Segment[]; blocksAwarded: number; piecesEarned: number }; // piecesEarned: this session
 export type State = {
-  version: 6;
+  version: 7;
   timer: Timer;
   carryMs: number; // focused time left over from previous sessions, < BLOCK_MS
   daily: Record<string, number>; // local YYYY-MM-DD -> focused ms (closed segments only)
   pieces: Partial<Record<PieceId, number>>;
-  rollsSinceRare: number;
   unlockedThemes: ThemeId[];
   room: Partial<Record<Slot, ItemId>>;
 };
-export type Drop = { pieceId: PieceId; rarity: Rarity; window: TimeWindow; at: number };
+/** One 5-minute drop: `count` pieces of the window it completed in. */
+export type Drop = { window: TimeWindow; count: number; at: number };
 export type Rng = () => number;
 type Result = { state: State; drops: Drop[] };
 
 export function initialState(): State {
   return {
-    version: 6,
+    version: 7,
     timer: { segments: [], blocksAwarded: 0, piecesEarned: 0 },
     carryMs: 0,
     daily: {},
     pieces: {},
-    rollsSinceRare: 0,
     unlockedThemes: [],
     room: {},
   };
@@ -172,41 +166,28 @@ export function pieceCount(rng: Rng): number {
   return COUNT_WEIGHTS.length;
 }
 
-export function roll(window: TimeWindow, rollsSinceRare: number, rng: Rng) {
-  const r = rng();
-  let rarity: Rarity = r < ODDS.special ? "special" : r < ODDS.special + ODDS.rare ? "rare" : "common";
-  if (rarity === "common" && rollsSinceRare >= PITY_AFTER) rarity = "rare";
-  const pool = PIECES.filter((p) => p.window === window && p.rarity === rarity);
-  const piece = pool[Math.min(pool.length - 1, Math.floor(rng() * pool.length))];
-  return { pieceId: piece.id as PieceId, rarity, rollsSinceRare: rarity === "common" ? rollsSinceRare + 1 : 0 };
-}
-
-/** One drop of 1–5 pieces per completed block, each in the time window where it completed. */
+/** One drop of 1–5 pieces per completed block, of the window where the block completed. */
 export function award(s: State, now: number, rng: Rng): Result {
   const n = pendingBlocks(s, now);
   if (n <= 0) return { state: s, drops: [] };
   const pieces = { ...s.pieces };
-  let since = s.rollsSinceRare;
   const drops: Drop[] = [];
   for (let i = 1; i <= n; i++) {
     const at = blockCompletedAt(s, s.timer.blocksAwarded + i, now);
     const window = windowAt(at);
-    for (let c = pieceCount(rng); c > 0; c--) {
-      const r = roll(window, since, rng);
-      since = r.rollsSinceRare;
-      pieces[r.pieceId] = (pieces[r.pieceId] ?? 0) + 1;
-      drops.push({ pieceId: r.pieceId, rarity: r.rarity, window, at });
-    }
+    const count = pieceCount(rng);
+    pieces[window] = (pieces[window] ?? 0) + count;
+    drops.push({ window, count, at });
   }
+  const earned = drops.reduce((sum, d) => sum + d.count, 0);
   return {
     state: {
       ...s,
       pieces,
-      rollsSinceRare: since,
       // Idle (only carried-over time): spend it from the carry so the next session can't award it again.
       ...(s.timer.segments.length === 0
         ? { carryMs: s.carryMs - n * BLOCK_MS }
-        : { timer: { ...s.timer, blocksAwarded: s.timer.blocksAwarded + n, piecesEarned: s.timer.piecesEarned + drops.length } }),
+        : { timer: { ...s.timer, blocksAwarded: s.timer.blocksAwarded + n, piecesEarned: s.timer.piecesEarned + earned } }),
     },
     drops,
   };
@@ -251,20 +232,6 @@ export function place(s: State, slot: Slot, itemId: ItemId | null): State {
   return { ...s, room: { ...s.room, [slot]: itemId } };
 }
 
-/** The room theme: most placed items wins; ties go to the placed wallpaper's theme, then catalog order. */
-export function roomTheme(room: Partial<Record<Slot, ItemId>>): ThemeId | null {
-  const counts = new Map<ThemeId, number>();
-  for (const id of Object.values(room)) {
-    const t = id && ITEM_BY_ID[id]?.themeId;
-    if (t) counts.set(t, (counts.get(t) ?? 0) + 1);
-  }
-  if (!counts.size) return null;
-  const max = Math.max(...counts.values());
-  const top = THEMES.map((t) => t.id as ThemeId).filter((t) => counts.get(t) === max);
-  const wall = room.wallpaper && ITEM_BY_ID[room.wallpaper]?.themeId;
-  return wall && top.includes(wall) ? wall : top[0];
-}
-
 export function applyTheme(s: State, themeId: ThemeId): State {
   return ITEMS.filter((i) => i.themeId === themeId).reduce((acc, i) => place(acc, i.slot, i.id), s);
 }
@@ -275,7 +242,7 @@ const isObj = (v: unknown): v is Record<string, unknown> => typeof v === "object
 
 // v4 had 6 coarse slots; v5 splits the room into 12 (SPEC §4.3). Window items split into cover + view.
 const V5_SLOT: Record<string, Slot> = { window: "windowCover", wall: "wallDecor", shelf: "shelfObject", desk: "deskObject1", lighting: "lighting", floor: "floor" };
-const V5_VIEW: Record<string, ItemId> = { "garden-window": "garden-view", "sea-window": "sea-view", "city-window": "city-view" };
+const V5_VIEW: Record<string, string> = { "garden-window": "garden-view", "sea-window": "sea-view", "city-window": "city-view" };
 
 function migrateRoomV5(old: Record<string, unknown>): State["room"] {
   const room: State["room"] = {};
@@ -283,33 +250,53 @@ function migrateRoomV5(old: Record<string, unknown>): State["room"] {
     const to = V5_SLOT[slot];
     if (!to || typeof id !== "string" || !(id in ITEM_BY_ID)) continue;
     room[to] = id as ItemId;
-    if (slot === "window" && V5_VIEW[id]) room.windowView = V5_VIEW[id];
+    if (slot === "window" && V5_VIEW[id]) room.windowView = V5_VIEW[id] as ItemId; // unknown views are dropped by the v6 cleanup
   }
   return room;
 }
 
+// v7: the 24 old piece types merge into one piece per time window; rarity is gone.
+const V7_PIECE_WINDOW: Record<string, TimeWindow> = {
+  dew: "dawn", sunbeam: "dawn", mug: "dawn", feather: "dawn", "pink-cloud": "dawn", "sunrise-marble": "dawn",
+  cloud: "day", pencil: "day", sprout: "day", "paper-plane": "day", "lemon-candy": "day", rainbow: "day",
+  "sunset-glass": "evening", "warm-light": "evening", "maple-leaf": "evening", "cat-bell": "evening", cocoa: "evening", "sunset-cat": "evening",
+  star: "night", candle: "night", firefly: "night", moon: "night", letter: "night", aurora: "night",
+  dawn: "dawn", day: "day", evening: "evening", night: "night",
+};
+
+function migratePiecesV7(old: Record<string, unknown>): State["pieces"] {
+  const pieces: State["pieces"] = {};
+  for (const [id, n] of Object.entries(old)) {
+    const w = V7_PIECE_WINDOW[id];
+    if (w && typeof n === "number") pieces[w] = (pieces[w] ?? 0) + n;
+  }
+  return pieces;
+}
+
 /** Validates stored or imported state and upgrades older versions. Throws INVALID_STATE. */
 export function migrate(raw: unknown): State {
-  if (!isObj(raw) || ![1, 2, 3, 4, 5, 6].includes(raw.version as number)) throw new Error("INVALID_STATE");
+  if (!isObj(raw) || ![1, 2, 3, 4, 5, 6, 7].includes(raw.version as number)) throw new Error("INVALID_STATE");
   const base = initialState();
   const timer = { ...base.timer, ...(isObj(raw.timer) ? raw.timer : {}) } as Timer;
   // v1 counted 30-minute blocks; v2 counts 5-minute rolls.
   if (raw.version === 1 && typeof timer.blocksAwarded === "number") timer.blocksAwarded *= V1_BLOCK_MS / BLOCK_MS;
-  const { rollsSinceDrop: _drop, ...rest } = raw; // v2-only field
+  const { rollsSinceDrop: _drop, rollsSinceRare: _rare, ...rest } = raw; // fields dropped in v3 and v7
   void _drop;
+  void _rare;
   const moved = (raw.version as number) < 5 && isObj(raw.room) ? migrateRoomV5(raw.room) : raw.room;
   // v6: drop placed items that no longer exist (themes were trimmed in v0.13) or sit in the wrong slot.
   const room = isObj(moved)
     ? (Object.fromEntries(Object.entries(moved).filter(([slot, id]) => ITEM_BY_ID[id as ItemId]?.slot === slot)) as State["room"])
     : moved;
-  const s = { ...base, ...rest, room, version: 6, timer } as State;
+  const pieces = isObj(raw.pieces) ? migratePiecesV7(raw.pieces) : raw.pieces;
+  const unlockedThemes = Array.isArray(raw.unlockedThemes) ? raw.unlockedThemes.filter((t) => t in THEME_BY_ID) : raw.unlockedThemes;
+  const s = { ...base, ...rest, room, pieces, unlockedThemes, version: 7, timer } as State;
   const ok =
     Array.isArray(s.timer.segments) &&
     s.timer.segments.every((g) => isObj(g) && typeof g.start === "number" && (g.end === null || typeof g.end === "number")) &&
     typeof s.timer.blocksAwarded === "number" &&
     typeof s.timer.piecesEarned === "number" &&
     typeof s.carryMs === "number" &&
-    typeof s.rollsSinceRare === "number" &&
     isObj(s.daily) &&
     isObj(s.pieces) &&
     isObj(s.room) &&

@@ -1,7 +1,6 @@
 "use client";
 import { useId, type ComponentType } from "react";
 import type { ItemId } from "../../../content/catalog";
-import type { Glow } from "../items";
 import { INK, WallPattern, v } from "../shared";
 
 // 별밤 도서관 (starry-library): stars, jars, and old wood. Pre-v5 items (curtains, garland, candle & books, moon clock) live in items.tsx.
@@ -81,5 +80,3 @@ export const STARRY_ART: Partial<Record<ItemId, ComponentType>> = {
   "library-desk": LibraryDesk,
   "floor-books": FloorBooks,
 };
-
-export const STARRY_GLOWS: Partial<Record<string, Glow[]>> = {};

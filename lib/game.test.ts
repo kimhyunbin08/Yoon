@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ITEMS, PIECE_BY_ID, SLOTS, THEMES, type ThemeId } from "../content/catalog";
+import { ITEMS, SLOTS, THEMES, type ThemeId } from "../content/catalog";
 import {
   applyTheme,
   award,
@@ -12,8 +12,6 @@ import {
   pieceCount,
   place,
   resume,
-  roomTheme,
-  roll,
   skyPhaseAt,
   start,
   studiedOn,
@@ -25,12 +23,8 @@ import {
 // Local-time helper so tests pass in any TZ.
 const at = (h: number, m = 0, day = 13) => new Date(2026, 9, day, h, m).getTime();
 const MIN = 60_000;
-const cycle = (...values: number[]) => {
-  let i = 0;
-  return () => values[i++ % values.length];
-};
-// One piece per drop (count rng 0 → 1), common rarity, last piece in pool.
-const always = () => cycle(0, 0.99, 0.99);
+// One piece per drop (count rng 0 → 1).
+const always = () => () => 0;
 
 describe("time windows", () => {
   it("maps hours to windows", () => {
@@ -75,8 +69,8 @@ describe("timer", () => {
   it("assigns a roll to the window where its block completes", () => {
     const s = start(initialState(), at(8, 57));
     const { drops } = award(s, at(9, 2), always());
-    expect(drops[0].window).toBe("day");
-    expect(PIECE_BY_ID[drops[0].pieceId].window).toBe("day");
+    expect(drops[0]).toEqual({ window: "day", count: 1, at: at(9, 2) });
+    expect(award(s, at(9, 2), always()).state.pieces).toEqual({ day: 1 });
   });
 
   it("shifts completion time by pauses", () => {
@@ -125,17 +119,17 @@ describe("drops", () => {
     expect([0, 0.15, 0.5, 0.75, 0.95, 0.9999].map((r) => pieceCount(() => r))).toEqual([1, 2, 3, 4, 5, 5]);
   });
 
-  it("puts every piece of one drop at the same time and window", () => {
-    const s = start(initialState(), at(10));
-    const { drops } = award(s, at(10, 5), cycle(0.5, 0.99, 0.99)); // count 3
-    expect(drops).toHaveLength(3);
-    expect(new Set(drops.map((d) => d.at))).toEqual(new Set([at(10, 5)]));
+  it("pays a drop entirely in the window's piece", () => {
+    const s = start(initialState(), at(18));
+    const r = award(s, at(18, 5), () => 0.5); // count 3
+    expect(r.drops).toEqual([{ window: "evening", count: 3, at: at(18, 5) }]);
+    expect(r.state.pieces).toEqual({ evening: 3 });
   });
 
   it("counts pieces earned this session and resets on the next start", () => {
-    let r = award(start(initialState(), at(10)), at(10, 10), cycle(0.5, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99)); // 2 drops × 3
+    let r = award(start(initialState(), at(10)), at(10, 10), () => 0.5); // 2 drops × 3
     expect(r.state.timer.piecesEarned).toBe(6);
-    r = award(r.state, at(10, 15), cycle(0.5, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99));
+    r = award(r.state, at(10, 15), () => 0.5);
     expect(r.state.timer.piecesEarned).toBe(9);
     const ended = end(r.state, at(10, 16), always()).state;
     expect(ended.timer.piecesEarned).toBe(0);
@@ -145,25 +139,8 @@ describe("drops", () => {
   it("never gives an empty 5 minutes", () => {
     const s = start(initialState(), at(10));
     const { drops } = award(s, at(11), () => 0.99);
-    expect(new Set(drops.map((d) => d.at)).size).toBe(12);
-  });
-
-  it("guarantees a rare after 8 commons", () => {
-    let since = 0;
-    const rarities = [];
-    for (let i = 0; i < 9; i++) {
-      const r = roll("day", since, () => 0.99);
-      since = r.rollsSinceRare;
-      rarities.push(r.rarity);
-    }
-    expect(rarities.slice(0, 8).every((r) => r === "common")).toBe(true);
-    expect(rarities[8]).toBe("rare");
-    expect(since).toBe(0);
-  });
-
-  it("rolls special under 5%", () => {
-    expect(roll("night", 0, () => 0.01).rarity).toBe("special");
-    expect(roll("night", 0, () => 0.2).rarity).toBe("rare");
+    expect(drops).toHaveLength(12);
+    expect(drops.every((d) => d.count >= 1 && d.count <= 5)).toBe(true);
   });
 
   it("averages about 36 pieces an hour with real randomness", () => {
@@ -171,7 +148,7 @@ describe("drops", () => {
     const rng = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
     const hours = 200;
     const r = award(start(initialState(), at(9)), at(9) + hours * 60 * MIN, rng);
-    const perHour = r.drops.length / hours;
+    const perHour = r.drops.reduce((n, d) => n + d.count, 0) / hours;
     expect(perHour).toBeGreaterThan(35);
     expect(perHour).toBeLessThan(37);
   });
@@ -180,13 +157,13 @@ describe("drops", () => {
 describe("themes and room", () => {
   const rich = () => ({
     ...initialState(),
-    pieces: { dew: 23, sunbeam: 19, sprout: 24, feather: 8, "pink-cloud": 8 },
+    pieces: { dawn: 60, day: 21 },
   });
 
   it("unlocks a theme and consumes pieces", () => {
     const s = unlock(rich(), "dawn-garden");
     expect(s.unlockedThemes).toEqual(["dawn-garden"]);
-    expect(s.pieces).toEqual({ dew: 0, sunbeam: 0, sprout: 1, feather: 0, "pink-cloud": 0 });
+    expect(s.pieces).toEqual({ dawn: 0, day: 1 });
     expect(() => unlock(s, "dawn-garden")).toThrow("ALREADY_UNLOCKED");
   });
 
@@ -219,18 +196,10 @@ describe("themes and room", () => {
     }
   });
 
-  it("picks the room theme by most placed items, wallpaper breaking ties", () => {
-    expect(roomTheme({})).toBeNull();
-    expect(roomTheme({ desk: "paw-desk", floor: "cat-cushion", deskObject1: "crt-monitor" })).toBe("sunset-cat");
-    expect(roomTheme({ wallpaper: "neon-wallpaper", desk: "paw-desk" })).toBe("neon-glitch");
-    expect(roomTheme({ desk: "paw-desk", deskObject1: "crt-monitor" })).toBe("sunset-cat"); // tie: catalog order
-  });
-
   it("lets slots mix items from different themes", () => {
-    let s = { ...initialState(), unlockedThemes: ["dawn-garden", "neon-glitch"] as ThemeId[] };
-    s = { ...s, unlockedThemes: [...s.unlockedThemes, "sunset-cat"] };
-    s = place(place(s, "desk", "paw-desk"), "deskObject1", "crt-monitor");
-    expect(s.room).toEqual({ desk: "paw-desk", deskObject1: "crt-monitor" });
+    let s = { ...initialState(), unlockedThemes: ["sunny-cafe", "sunset-cat"] as ThemeId[] };
+    s = place(place(s, "desk", "paw-desk"), "deskObject1", "latte-cake");
+    expect(s.room).toEqual({ desk: "paw-desk", deskObject1: "latte-cake" });
   });
 });
 
@@ -252,8 +221,10 @@ describe("migrate", () => {
       room: {},
     };
     const s = migrate(v1);
-    expect(s.version).toBe(6);
+    expect(s.version).toBe(7);
     expect(s.timer.blocksAwarded).toBe(12);
+    expect(s.pieces).toEqual({ dawn: 1 });
+    expect("rollsSinceRare" in s).toBe(false);
     expect(s.timer.piecesEarned).toBe(0);
     // 10 min carry + 60 min focused = 70 min = 14 rolls; 12 already paid as two v1 pieces.
     expect(award(s, at(11), always()).drops).toHaveLength(2);
@@ -263,28 +234,42 @@ describe("migrate", () => {
     const v4 = {
       ...initialState(),
       version: 4,
-      room: { window: "city-window", wall: "neon-sign", shelf: "boombox", lighting: "neon-tube", desk: "crt-monitor", floor: "cat-cushion" },
+      room: { window: "sea-window", wall: "moon-clock", shelf: "book-shelf", lighting: "star-garland", desk: "candle-books", floor: "cat-cushion" },
     };
     expect(migrate(v4).room).toEqual({
-      windowCover: "city-window",
-      windowView: "city-view",
-      wallDecor: "neon-sign",
-      shelfObject: "boombox",
-      lighting: "neon-tube",
-      deskObject1: "crt-monitor",
+      windowCover: "sea-window",
+      windowView: "sea-view",
+      wallDecor: "moon-clock",
+      shelfObject: "book-shelf",
+      lighting: "star-garland",
+      deskObject1: "candle-books",
       floor: "cat-cushion",
     });
   });
 
   it("drops placed items that were removed from the catalog (v6)", () => {
-    const v5 = { ...initialState(), version: 5, room: { desk: "trestle-desk", deskObject1: "crt-monitor", wallpaper: "neon-sign" } };
-    expect(migrate(v5).room).toEqual({ deskObject1: "crt-monitor" });
+    const v5 = { ...initialState(), version: 5, room: { desk: "trestle-desk", deskObject1: "latte-cake", wallpaper: "moon-clock", lighting: "neon-tube" } };
+    expect(migrate(v5).room).toEqual({ deskObject1: "latte-cake" });
+  });
+
+  it("merges the old piece types into window pieces and drops removed themes (v7)", () => {
+    const v6 = {
+      ...initialState(),
+      version: 6,
+      rollsSinceRare: 4,
+      pieces: { dew: 3, sunbeam: 2, "sunset-glass": 7, star: 4, aurora: 1, bogus: 9 },
+      unlockedThemes: ["sunset-cat", "neon-glitch"],
+    };
+    const s = migrate(v6);
+    expect(s.pieces).toEqual({ dawn: 5, evening: 7, night: 5 });
+    expect(s.unlockedThemes).toEqual(["sunset-cat"]);
+    expect("rollsSinceRare" in s).toBe(false);
   });
 
   it("drops v2's dry-pity counter", () => {
     const v2 = { ...initialState(), version: 2, rollsSinceDrop: 1 };
     const s = migrate(v2);
-    expect(s.version).toBe(6);
+    expect(s.version).toBe(7);
     expect("rollsSinceDrop" in s).toBe(false);
   });
 
@@ -298,7 +283,7 @@ describe("migrate", () => {
 
   it("rejects junk", () => {
     expect(() => migrate(null)).toThrow("INVALID_STATE");
-    expect(() => migrate({ version: 7 })).toThrow("INVALID_STATE");
-    expect(() => migrate({ version: 3, pieces: [] })).toThrow("INVALID_STATE");
+    expect(() => migrate({ version: 8 })).toThrow("INVALID_STATE");
+    expect(() => migrate({ version: 3, daily: [] })).toThrow("INVALID_STATE");
   });
 });

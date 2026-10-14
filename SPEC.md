@@ -1,7 +1,7 @@
 # StillRoom — Product Spec
 
 Source: user interview (2026-10).
-Status: v0.14 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
+Status: v0.15 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
 Sections: 1 Ideation · 2 PRD · 3 TRD · 4 Design Spec · 5 Open Questions · 6 Market Research & Decisions · 7 Next Development Steps (planned, not built). Agent instructions live in `AGENTS.md`.
 
 Platform decision: **laptop only** (desktop browser, landscape). No phone, no tablet, no sync.
@@ -55,59 +55,56 @@ Accounts, sync, mobile/tablet layouts, social, rankings, payments, native apps, 
 |---|---|---|
 | US-1 | open the app and see her room | No login. Room renders full screen within 1 s from cached assets. Installable as a desktop PWA (Chrome/Edge; Safari via Add to Dock). |
 | US-2 | start / pause / stop a study timer | Timer survives reload and closing the tab (stored start timestamp). No upper limit. While a session is running or paused, the timer pill shows the session time and the pieces earned since start ("이번에 모은 조각 27개"); the end toast repeats both ("이번 공부 45분 · 조각 27개"). No countdown to the next drop. |
-| US-3 | get pieces for studying | Every 5 min of timer time she gets 1–5 random pieces (3 is most common), awarded live while running with one small, quiet toast per drop. Leftover minutes carry over to the next session. |
+| US-3 | get pieces for studying | Every 5 min of timer time she gets 1–5 pieces of the current time window (새벽의 조각, 낮의 조각, 노을의 조각, 밤의 조각; 3 is the most common count), awarded live while running with one small, quiet toast per drop. Leftover minutes carry over to the next session. |
 | US-4 | collect different pieces at different times | Room shows the current time window and its piece set. |
-| US-5 | browse her pieces | Collection grid by time window; owned count; unowned as silhouette. |
+| US-5 | browse her pieces | 조각함 shows the four pieces with counts and the hours each one drops. |
 | US-6 | unlock a theme with pieces | Theme shows recipe with owned/required. Unlock consumes pieces and places the theme's items in the room right away. |
-| US-7 | decorate her room | The room is split into 13 component slots (§4.3). Each theme brings 8–9 items that suit it (not every slot), and each slot is set independently, so she can mix items across themes (e.g. the neon CRT on the cat desk). Empty slots show the base room. "방에 통째로 적용" places all of a theme's items. |
+| US-7 | decorate her room | The room is split into 13 component slots (§4.3). Each theme brings 8–9 items that suit it (not every slot), and each slot is set independently, so she can mix items across themes (e.g. the café latte on the cat desk). Empty slots show the base room. "방에 통째로 적용" places all of a theme's items. |
 | US-8 | see how long she studied | Today total on the room; 7-day bars in Records. |
 | US-9 | not lose her room | Export / import a backup JSON file. Reminder after every 3rd unlocked theme. |
 
 ### 2.4 Game rules
 **Time windows** (device local time):
-| Window | KR | Hours | Example piece set |
+| Window | KR | Hours | Piece (the only currency) |
 |---|---|---|---|
-| dawn | 새벽 | 05:00–09:00 | morning light, dew, steaming mug |
-| day | 낮 | 09:00–17:00 | clouds, potted plant, pencils |
-| evening | 저녁 | 17:00–21:00 | sunset glass, warm lamp, cat |
-| night | 밤 | 21:00–05:00 | stars, moon, candle |
+| dawn | 새벽 | 05:00–09:00 | 새벽의 조각 |
+| day | 낮 | 09:00–17:00 | 낮의 조각 |
+| evening | 저녁 | 17:00–21:00 | 노을의 조각 |
+| night | 밤 | 21:00–05:00 | 밤의 조각 |
 
 - Every 5 focused minutes = 1 drop of 1–5 pieces. Count weights: 1 → 10%, 2 → 20%, 3 → 40%, 4 → 20%, 5 → 10% (mean 3, ≈ 36 pieces per focused hour).
-- Each piece in a drop rolls its own rarity and type. A drop belongs to the window in which its 5-min block completes.
-- Rarity per roll: common 70%, rare 25%, special 5%.
-- Pity: after 8 rolls without rare or better, the next roll is at least rare.
+- A drop is made of the piece of the window in which its 5-min block completes. There are no rarities (D17): one currency per time window keeps it simple.
 - Paused time does not count. No caps of any kind.
 - Minutes left over when a session ends (under 5) carry into the next session, so stopping never loses progress.
 
-**Themes**: a theme costs a recipe of 80–107 pieces (≈ 2–3 focused hours, mostly in its windows) from 1–2 windows and unlocks 8–9 room items (at most one per slot). Content: 5 themes, 24 piece types (6 per window). Add themes after she has used it for a week.
+**Themes**: a theme costs 80–105 pieces from 1–2 windows (≈ 2–3 focused hours, mostly in those windows) and unlocks 8–9 room items (at most one per slot).
 
-| Theme | Recipe (windows) |
+| Theme | Recipe |
 |---|---|
-| 새벽 정원 dawn-garden | dawn + day, 81 |
-| 햇살 카페 sunny-cafe | day + evening, 92 |
-| 노을 고양이 sunset-cat | evening, 80 |
-| 별밤 도서관 starry-library | night + dawn, 107 |
-| 네온 글리치 neon-glitch | night + evening, 88 (star 23, firefly 23, warm-light 19, sunset-glass 11, letter 8, aurora 4) |
+| 새벽 정원 dawn-garden | 새벽의 조각 60 + 낮의 조각 20 |
+| 햇살 카페 sunny-cafe | 낮의 조각 45 + 노을의 조각 45 |
+| 노을 고양이 sunset-cat | 노을의 조각 80 |
+| 별밤 도서관 starry-library | 밤의 조각 95 + 새벽의 조각 10 |
 
 Items per theme (unlocking a theme unlocks its column; "—" = the theme has no item for that slot):
 
-| Slot | 새벽 정원 | 햇살 카페 | 노을 고양이 | 별밤 도서관 | 네온 글리치 |
-|---|---|---|---|---|---|
-| 벽지 wallpaper | — | — | — | tiny stars | saturated violet→magenta + synthwave grid |
-| 창문 가림막 windowCover | white curtains | café half-curtain | — | lavender curtains | blinds |
-| 창밖 풍경 windowView | garden hedge | café street | rooftops | night sea + lighthouse | city skyline |
-| 상단 전등 lighting | paper lantern | pendant lamp | — | star garland | neon tube |
-| 책상 위 전등 deskLamp | — | banker's lamp | cat-ear lamp | — | neon lamp |
-| 달력 calendar (large, right wall) | flower calendar | tear-off calendar | cat-ear calendar | — | LED calendar |
-| 벽 장식 wallDecor (small, left wall) | — | menu board | sunset poster | moon clock | STILL neon sign |
-| 선반 위 shelfObject | plant pots | coffee jars | books & cactus | star jars | boombox & cassettes |
-| 책상 desk | — | café table | paw-handle desk | library desk | — |
-| 책상 위 1 deskObject1 | watering can | latte & cake | — | candle & books | CRT monitor |
-| 책상 위 2 deskObject2 | pressed-flower notebook | — | — | — | — |
-| 화분 plant | fern | — | cat grass | — | — |
-| 바닥 floor | mint rug | — | sleeping cat | floor book stack | — |
+| Slot | 새벽 정원 | 햇살 카페 | 노을 고양이 | 별밤 도서관 |
+|---|---|---|---|---|
+| 벽지 wallpaper | — | — | — | tiny stars |
+| 창문 가림막 windowCover | white curtains | café half-curtain | — | lavender curtains |
+| 창밖 풍경 windowView | garden hedge | café street | rooftops | night sea + lighthouse |
+| 상단 전등 lighting | paper lantern | pendant lamp | — | star garland |
+| 책상 위 전등 deskLamp | — | banker's lamp | cat-ear lamp | — |
+| 달력 calendar (large, right wall) | flower calendar | tear-off calendar | cat-ear calendar | — |
+| 벽 장식 wallDecor (small, left wall) | — | menu board | sunset poster | moon clock |
+| 선반 위 shelfObject | plant pots | coffee jars | books & cactus | star jars |
+| 책상 desk | — | café table | paw-handle desk | library desk |
+| 책상 위 1 deskObject1 | watering can | latte & cake | — | candle & books |
+| 책상 위 2 deskObject2 | pressed-flower notebook | — | — | — |
+| 화분 plant | fern | — | cat grass | — |
+| 바닥 floor | mint rug | — | sleeping cat | floor book stack |
 
-Art dropped in v0.13 (leaf/stripe/dot wallpapers, roller shade, wall sconce, leaf frame, trestle desk, moka pot, olive tree, checker rug, yarn basket, fish mug, moon calendar, hourglass, tall cactus, neon desk, retro keyboard, neon cactus, neon rug) is recoverable from commit `ef7149e` for future themes.
+Art dropped in v0.13 and the whole 네온 글리치 theme (removed in v0.15) are recoverable from commit `57f6736`; earlier drops (leaf/stripe/dot wallpapers, roller shade, wall sconce, leaf frame, trestle desk, moka pot, olive tree, checker rug, yarn basket, fish mug, moon calendar, hourglass, tall cactus, neon desk, retro keyboard, neon cactus, neon rug) is recoverable from commit `ef7149e` for future themes.
 
 Calendars show the real date (month and day), drawn in the theme's style; they are the future home of the live board (§7).
 
@@ -142,12 +139,11 @@ Why no Supabase: one user, one laptop, no competition to protect. A backend adds
 ### 3.3 State shape (single IndexedDB key `state`)
 ```ts
 type State = {
-  version: 6; // v1 counted 30-min blocks (migrate multiplies blocksAwarded by 6); v3 drops v2's rollsSinceDrop; v4 adds timer.piecesEarned; v5 moves room to 12 slots; v6 drops placed items that no longer exist
+  version: 7; // … v6 drops placed items that no longer exist; v7 merges the 24 old piece types into 4 window pieces and drops rarity
   timer: { segments: { start: number; end: number | null }[]; blocksAwarded: number; piecesEarned: number }; // open segment = running; piecesEarned resets on start
   carryMs: number; // leftover focus from earlier sessions, < 5 min
   daily: Record<string, number>; // local YYYY-MM-DD -> focused ms, split at midnight
-  pieces: Partial<Record<PieceId, number>>;
-  rollsSinceRare: number;
+  pieces: Partial<Record<TimeWindow, number>>; // 새벽/낮/노을/밤의 조각
   unlockedThemes: ThemeId[];
   room: Partial<Record<Slot, ItemId>>;
 };
@@ -161,8 +157,7 @@ type State = {
 | `pendingBlocks(state, now)` | `floor((carryMs + focusedMs) / 5min) − blocksAwarded` |
 | `blockCompletedAt(state, k)` | Walks segments to find the wall-clock time block k finished, so it lands in the right window even if the app was closed. |
 | `windowAt(ts)` / `skyPhaseAt(ts)` | Local hour → drop window (4) / sky phase (8, visual only). |
-| `award` per block | `pieceCount(rng)` picks 1–5 by the weights above, then `roll` runs once per piece. While idle, blocks are paid from `carryMs` directly so a later session can't pay them twice. |
-| `roll(window, rollsSinceRare, rng)` | Rarity with pity, then uniform piece within window+rarity. |
+| `award` per block | `pieceCount(rng)` picks 1–5 by the weights above; all are the block's window piece. While idle, blocks are paid from `carryMs` directly so a later session can't pay them twice. |
 | `award` / `tick` | Awards all pending blocks. `tick` also stops the timer if the clock moved backwards. |
 | `unlock` / `place` / `applyTheme` | Throw `INSUFFICIENT_PIECES`, `ALREADY_UNLOCKED`, `ITEM_LOCKED`, `SLOT_MISMATCH`. |
 | `migrate(raw)` | Validates stored or imported state, throws `INVALID_STATE`. An unreadable stored copy is kept under a `state-corrupt-*` key. |
@@ -208,35 +203,12 @@ Text on pastel fills uses `--text`, never white (contrast ≥ 4.5:1). Font: Pret
 ### 4.3 Room scene
 - **Laptop only, landscape.** Scene is a 16:10 stage (1440×900 design size) scaled to fit the window with `object-fit: cover` behavior; narrower windows crop the side walls, never the window or desk. Minimum supported window: 1024×640.
 - Composition: window center back wall, shelf left wall, frame/poster right wall, desk across the bottom, lamp on desk, floor strip.
-- **White scene, color from light only** (supersedes the prism backdrop, D12). Inside the room SVG every art fill maps to three paper whites (`--paper-1` `#FFFFFF`, `--paper-2` `#F3F1ED`, `--paper-3` `#E4E0DA`); only ink details (eyes) stay dark. Color comes from light: the sky in the window (the sun takes the phase's `--light` color), the time-of-day room tint, and lamp and neon glows. The window light shaft was removed on 2026-10-14 (D15). Piece icons in the UI keep their colors (they are collectibles, not part of the scene).
-- **Lofi duotone: light area + shadow area** (D16, supersedes the room tint). Art stays paper white with its pencil outlines; color comes from two `multiply` layers over the whole room (the window glass excluded): a **light area** (a diagonal wedge from the upper right, `M1440 40 L760 470 L520 900 L1440 900 Z`, as in the lofi reference) in `--duo-light`, and the **shadow area** (everything else) in `--duo-shadow`. Lines inside each area take its tint, so outlines stay but read as part of the light or shadow.
-  - **Room theme:** the theme with the most placed items (tie: the theme of the placed wallpaper, then catalog order). No themed items → the phase colors alone.
-  - **Colors:** each phase has a light/shadow pair; the room theme's own pair is mixed in at 35% (`color-mix(in oklab, phase 65%, theme 35%)`). Both cross-fade over 2 s at phase changes.
-
-| Phase | light | shadow |
-|---|---|---|
-| predawn | `#F2D9EF` | `#8F9AD8` |
-| dawn | `#FFD6C2` | `#A9A6E0` |
-| morning | `#FFE7B8` | `#A8C8EA` |
-| midday | `#FFF1C9` | `#B4D4EE` |
-| afternoon | `#FFD9A0` | `#A9B8E6` |
-| evening | `#FFB98F` | `#8F8FD6` |
-| twilight | `#F4A7C4` | `#7D74C9` |
-| night | `#C9C6F5` | `#5E63A8` |
-
-| Theme | light | shadow |
-|---|---|---|
-| 새벽 정원 | mint `#D8F0D0` | sage `#7FB3A0` |
-| 햇살 카페 | cream `#FFE2B8` | caramel `#B9957A` |
-| 노을 고양이 | peach `#FFC9B0` | rose `#C9879A` |
-| 별밤 도서관 | lavender `#D6D0FF` | indigo `#6F78C4` |
-| 네온 글리치 | fixed `#FFD6EC` light pink | fixed `#BFE6FF` light sky (not time-based) |
+- **White scene, color from light only** (supersedes the prism backdrop, D12). Inside the room SVG every art fill maps to three paper whites (`--paper-1` `#FFFFFF`, `--paper-2` `#F3F1ED`, `--paper-3` `#E4E0DA`); only ink details (eyes) stay dark. Color comes from light: the sky in the window (the sun takes the phase's `--light` color). The window light shaft was removed on 2026-10-14 (D15). Piece icons in the UI keep their colors (they are collectibles, not part of the scene).
+- **No light or shadow effects** (D17, 2026-10-14): the duotone, ground shadow, and lamp glows were removed. The room is white paper with colored-pencil outlines; the only color is the sky inside the window (sun in `--light`).
 
 - **Lofi line-art form** (reference: lofi room illustration; form only):
   - Every opaque shape of the window frame, window view, curtains, shelf, desk, base objects, and room items is outlined in `--line-art` (a time-tinted graphite: the phase's `--prism-1` mixed into `#4A4857`). Compound shapes built from overlapping circles (clouds, hedges) are outlined once around the silhouette (stroke-under, fill-over), never along internal seams.
   - **Colored-pencil texture:** the whole line-art group runs through one static SVG filter: fractal-noise displacement (scale ≈ 2) for a hand-drawn wobble, and a noise mask that punches grain into strokes.
-  - **Ground shadows** under the desk. (The palm-leaf shadow was removed on 2026-10-14.)
-  - **Neon glitch theme (separate from the time-based colors):** when neon glitch is the room theme, the whole room switches to **dot-pixel art**: the line-art group uses an 8 px mosaic filter instead of the colored-pencil filter, and the duotone is fixed light pink / light sky. Easy on the eyes: neon parts use soft `--neon-pink` `#FF9ECF` and `--neon-cyan` `#8FD8FF`, the wallpaper is a pastel pink→sky gradient (`#FFD9EC` → `#CDEBFF`) with a soft pixel grid, and the static glitch is soft pink/sky ghost copies (3 px) behind each neon item. No animation. Neon items placed in another theme's room keep the soft glitch but are not pixelated.
   - Static only (no animated light), so the room stays cheap to leave open for hours.
 
 - **Slots (v6, 13):** `wallpaper`, `windowCover`, `windowView`, `lighting` (상단 전등: ceiling/top light), `deskLamp` (책상 위 전등; empty = the base swing-arm lamp, the room's main light), `calendar` (large, right wall; real date), `wallDecor` (small, upper left wall between the shelf and the window, clear of the window-time chip), `shelfObject`, `desk` (same footprint for every theme so desk objects sit at y=600), `deskObject1` (left of desk), `deskObject2` (center of desk), `plant` (left floor), `floor`. Empty slot = base art: white wall, open sky with hills, no cover, no top light, the base lamp, no calendar/wall decor, empty shelf, the base desk, notebooks + pencil cup, the monstera. Calendar and wall-decor art share one drawing size and are scaled into their spots (calendar ×1.9 on the right wall, wall decor ×0.5 on the left), with outline widths compensated so lines match the room.
@@ -244,16 +216,16 @@ Text on pastel fills uses `--text`, never white (contrast ≥ 4.5:1). Font: Pret
 - **Mood (from the mood board): "beauty inside emptiness".** Out the window: open sky, outlined clouds, and soft rolling hills over a sea of clouds. No tower. Calm and empty, never busy.
 - **Sky follows 8 phases** (visual only; drops still use the 4 windows in §2.4). Mood board hex values, softened toward white/lavender to stay pastel:
 
-| Phase | Hours | Top → bottom (source) | Room tint |
-|---|---|---|---|
-| predawn | 03–05 | `#708090` → `#4B0082` | lavender, stars |
-| dawn | 05–07 | `#E6E6FA` → `#FFD1DC` | faint peach, low sun |
-| morning | 07–10 | `#87CEEB` → `#F0F8FF` | none |
-| midday | 10–14 | `#00BFFF` → `#FFFFFF` | none |
-| afternoon | 14–17 | `#FFD700` → `#F5F5DC` | faint gold |
-| evening | 17–19 | `#FFA500` → `#FF7F50` | coral, lamps glow |
-| twilight | 19–21 | `#4B0082` → `#FF00FF` | violet, first stars |
-| night | 21–03 | `#191970` → `#000080` | indigo, moon, lamps glow |
+| Phase | Hours | Top → bottom (source) |
+|---|---|---|
+| predawn | 03–05 | `#708090` → `#4B0082` |
+| dawn | 05–07 | `#E6E6FA` → `#FFD1DC` |
+| morning | 07–10 | `#87CEEB` → `#F0F8FF` |
+| midday | 10–14 | `#00BFFF` → `#FFFFFF` |
+| afternoon | 14–17 | `#FFD700` → `#F5F5DC` |
+| evening | 17–19 | `#FFA500` → `#FF7F50` |
+| twilight | 19–21 | `#4B0082` → `#FF00FF` |
+| night | 21–03 | `#191970` → `#000080` |
 
 - Theme windows change the foreground (garden hedge, night sea with lighthouse).
 - Art: original SVG drawn for this project. One React component per room item and piece (`components/art/`), colored via CSS variables: in the room the palette maps to paper whites, in the UI pieces keep their pastel colors. Style rules: simple shapes, a `--line-art` outline on opaque shapes (applied by the room's line-art group, not per shape), rounded corners, no gradients except the window sky, window light, and glows. No 3D.
@@ -268,7 +240,7 @@ Text on pastel fills uses `--text`, never white (contrast ≥ 4.5:1). Font: Pret
 | Screen | Content | Primary action |
 |---|---|---|
 | Room | Full room, timer pill (session time + pieces earned this session), current window chip, today total | `공부 시작` / `일시정지` / `끝내기` |
-| Pieces (조각함) | Right drawer: tabs by window, 3-col grid, silhouettes | click → detail |
+| Pieces (조각함) | Right drawer: the four window pieces as large cards (count, drop hours) | — |
 | Themes (테마) | Right drawer: live room preview per theme + recipe `have/need` | `열기` when complete, then `방에 통째로 적용` |
 | Decorate (꾸미기) | Room with slot highlights (click a slot), bottom sheet with slot tabs + items | click to place, `비우기` |
 | Records (기록) | Right drawer: today, last 7 days, 7-day bars | `백업하기`, `불러오기` (confirm before replacing) |
@@ -328,10 +300,11 @@ Research on variable rewards: variable-ratio schedules drive the most consistent
 | D10 | ~~Prism backdrop on white~~ (blooms removed in D12): ivory wall/floor with time-of-day pastel blooms; UI accent becomes ivory; focus/outline use deep ivory `--ring` | User request (2026-10-13) with a "+prism" mood board. Radial gradients instead of blur filters keep an all-day backdrop cheap. A separate `--ring` keeps focus visible, since ivory on white is invisible. | Per-theme bloom colors; wall-only change; lavender accent kept. |
 | D11 | Lofi line-art form: outlines on furniture and items, window light beam via outside shading, leaf shadow, ground shadows, floor plant | User request (2026-10-13) with a lofi room reference (form only). Redrawing the existing SVG keeps time-of-day color, decorating, and crisp scaling. Outlines come from one CSS rule on a group, so new art gets them for free. | AI-generated raster background (breaks slot alignment and the original-SVG rule). |
 | D12 | White scene; color only from light and shadow; colored-pencil lines; outlined window view; tower and prism blooms removed; window light via overlay + multiply wash | User request (2026-10-13). Overlay alone does nothing on pure white, so a light multiply wash carries the color on white surfaces while overlay saturates lines and shadows. Palette remap is scoped to the room so collectible icons stay colorful. | Recoloring each art component by hand; overlay only (invisible on white). |
-| D13 | Neon glitch theme: a 5th unlockable theme, static glitch (RGB split, scanlines, glitch bars), neon colors only on light-emitting parts | User request (2026-10-14): one retro-punk glitch theme, still (not animated). Keeps the "color only from light" rule by making neon and screens the light. | Whole-room glitch mode; periodic glitch flicker. |
+| D13 | ~~Neon glitch theme: a 5th unlockable theme, static glitch (RGB split, scanlines, glitch bars), neon colors only on light-emitting parts ~~ (removed in D17) | User request (2026-10-14): one retro-punk glitch theme, still (not animated). Keeps the "color only from light" rule by making neon and screens the light. | Whole-room glitch mode; periodic glitch flicker. |
 | D14 | 12 component slots, one item per slot per theme (60 items), independent placement; neon wallpaper is saturated; leaf shadow removed | User request (2026-10-14): split objects so each can be set separately (wallpaper, light, plant, desk, two desk objects, shelf object, calendar, window cover, ...), every theme providing one of each, and a saturated background for neon glitch. | Keeping 6 coarse slots; a whole-room theme toggle. |
 | D15 | 13 slots (top light and desk lamp split), calendar large on the right wall and wall decor small on the left, 8–9 items per theme (wallpaper only for 별밤 도서관 and 네온 글리치), recipes ×0.75, window light shaft removed | User request (2026-10-14). Fewer items per theme keeps each theme's character; cheaper recipes match the smaller sets. | One item per slot per theme (D14); keeping the light shaft. |
-| D16 | Room-wide lofi duotone (light area / shadow area, per phase, tinted by the room theme); neon glitch becomes a pixel-art room mode with soft pink/sky static glitch | User request (2026-10-14): base + shadow color per time like the lofi reference (shadow blue, light orange), outlines kept; neon was hard on the eyes. | Per-item theme colors; keeping the saturated neon wall. |
+| D16 | ~~Room-wide lofi duotone (light area / shadow area, per phase, tinted by the room theme); neon glitch becomes a pixel-art room mode with soft pink/sky static glitch ~~ (removed in D17) | User request (2026-10-14): base + shadow color per time like the lofi reference (shadow blue, light orange), outlines kept; neon was hard on the eyes. | Per-item theme colors; keeping the saturated neon wall. |
+| D17 | One currency per time window (새벽/낮/노을/밤의 조각), no rarity; piece art in the room's white pencil style; neon glitch theme removed; all light/shadow effects removed (duotone, ground shadow, glows) | User request (2026-10-14): currencies felt scattered; glitch theme and light effects not wanted. Old counts convert by window, nothing is lost. | Keeping 24 piece types with rarities. |
 
 Taste call to revisit after a week of real use: if themes still go too fast, raise recipes rather than shrinking drops (bigger drops are the fun part).
 

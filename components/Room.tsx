@@ -1,12 +1,11 @@
 "use client";
 import { memo, useId, type ReactNode } from "react";
 import { ITEM_BY_ID, type ItemId, type SkyPhase, type Slot, type WindowView } from "../content/catalog";
-import { roomTheme } from "../lib/game";
-import { ITEM_ART, ITEM_GLOWS, type Glow } from "./art/items";
+import { ITEM_ART } from "./art/items";
 
 // Stage is 1440x900. preserveAspectRatio="slice" crops the side walls on narrow windows,
 // never the window or the desk (SPEC §4.3). Inside `.room` the art palette maps to paper whites
-// (globals.css); color comes only from the sky, window light, shade, and lamp glows.
+// (globals.css). There are no light or shadow effects: the only color is the sky in the window (SPEC §4.3).
 const v = (name: string) => `var(--c-${name})`;
 
 /** Where each slot's item lives; used for the decorate highlight and click targets. */
@@ -40,15 +39,6 @@ const PLACE: Partial<Record<Slot, Placement>> = {
   wallDecor: { from: [1205, 300], to: [390, 166], scale: 0.48, className: "scale-down" },
 };
 const placeTransform = ({ from, to, scale }: Placement) => `translate(${to[0]} ${to[1]}) scale(${scale}) translate(${-from[0]} ${-from[1]})`;
-const placeGlow = (g: Glow, { from, to, scale }: Placement): Glow => ({
-  ...g,
-  cx: to[0] + (g.cx - from[0]) * scale,
-  cy: to[1] + (g.cy - from[1]) * scale,
-  r: g.r * scale,
-});
-
-// Lofi duotone: the light area is a diagonal wedge from the upper right (lofi reference); the rest is shadow.
-const LIGHT_AREA = "M1440 40 L760 470 L520 900 L1440 900 Z";
 
 type Props = {
   room: Partial<Record<Slot, ItemId>>;
@@ -67,14 +57,6 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
   };
   const viewItem = item("windowView");
   const view: WindowView = (viewItem && (ITEM_BY_ID[viewItem] as { view?: WindowView }).view) || "hills";
-  const glows: Glow[] = [
-    ...(item("deskLamp") ? [] : [{ cx: 1118, cy: 520, r: 300 }]), // base lamp
-    ...(Object.keys(SLOT_RECTS) as Slot[]).flatMap((s) => {
-      const place = PLACE[s];
-      const own = ITEM_GLOWS[item(s) ?? ""] ?? [];
-      return place ? own.map((g) => placeGlow(g, place)) : own;
-    }),
-  ];
   const Art = (slot: Slot) => {
     const id = item(slot);
     const C = id ? ITEM_ART[id] : null;
@@ -88,16 +70,13 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
       <C />
     );
   };
-  const theme = roomTheme(room);
-  // Neon glitch is its own mode: the whole room becomes dot-pixel art instead of colored pencil.
-  const lineFilter = theme === "neon-glitch" ? `url(#pixel${uid})` : `url(#pencil${uid})`;
+  const pencil = `url(#pencil${uid})`;
 
   return (
     <svg
       viewBox="0 0 1440 900"
       preserveAspectRatio="xMidYMid slice"
       className={`room ${className ?? ""}`}
-      data-room-theme={theme ?? undefined}
       aria-hidden={onSlot ? undefined : true}
     >
       <defs>
@@ -105,48 +84,6 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
           <stop offset="0" style={{ stopColor: "var(--sky-top)" }} />
           <stop offset="1" style={{ stopColor: "var(--sky-bottom)" }} />
         </linearGradient>
-        <radialGradient id={`glow${uid}`}>
-          <stop offset="0" style={{ stopColor: "var(--c-glow)", stopOpacity: 0.7 }} />
-          <stop offset="1" style={{ stopColor: "var(--c-glow)", stopOpacity: 0 }} />
-        </radialGradient>
-        {(["pink", "cyan"] as const).map((c) => (
-          <radialGradient key={c} id={`glow-${c}${uid}`}>
-            <stop offset="0" style={{ stopColor: `var(--neon-${c})`, stopOpacity: 0.55 }} />
-            <stop offset="1" style={{ stopColor: `var(--neon-${c})`, stopOpacity: 0 }} />
-          </radialGradient>
-        ))}
-        {/* neon glitch: soft static glitch, a light-pink ghost left and a light-sky ghost right (same id in every Room; identical content) */}
-        <filter id="stillroom-rgbsplit" x="-5%" y="-10%" width="110%" height="120%">
-          <feOffset in="SourceAlpha" dx="-3" result="left" />
-          <feFlood floodColor="#ffb8dc" floodOpacity="0.9" />
-          <feComposite in2="left" operator="in" result="pink" />
-          <feOffset in="SourceAlpha" dx="3" result="right" />
-          <feFlood floodColor="#a9ddff" floodOpacity="0.9" />
-          <feComposite in2="right" operator="in" result="sky" />
-          <feMerge>
-            <feMergeNode in="pink" />
-            <feMergeNode in="sky" />
-            <feMergeNode in="SourceGraphic" />
-          </feMerge>
-        </filter>
-        {/* neon glitch room: 8 px dot-pixel mosaic (sample one pixel per 8x8 cell, then grow it to fill the cell) */}
-        <filter id={`pixel${uid}`} filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="1440" height="900">
-          <feFlood x="4" y="4" width="1" height="1" result="dot" />
-          <feComposite in="dot" width="8" height="8" result="cell" />
-          <feTile in="cell" result="grid" />
-          <feComposite in="SourceGraphic" in2="grid" operator="in" />
-          <feMorphology operator="dilate" radius="4" />
-        </filter>
-        {/* lofi duotone masks: the glass keeps its own sky colors */}
-        <mask id={`duo-light${uid}`}>
-          <path d={LIGHT_AREA} fill="white" />
-          <rect x="522" y="118" width="396" height="364" rx="12" fill="black" />
-        </mask>
-        <mask id={`duo-shadow${uid}`}>
-          <rect width="1440" height="900" fill="white" />
-          <path d={LIGHT_AREA} fill="black" />
-          <rect x="522" y="118" width="396" height="364" rx="12" fill="black" />
-        </mask>
         {/* colored-pencil lines: a slow wobble plus grain punched into the strokes */}
         <filter id={`pencil${uid}`} filterUnits="userSpaceOnUse" x="0" y="0" width="1440" height="900">
           <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="4" result="warp" />
@@ -167,21 +104,20 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
       {/* wall + floor: paper white */}
       <rect width="1440" height="720" fill={v("wall")} />
       <rect y="720" width="1440" height="180" fill={v("floor")} />
-      <ellipse cx="720" cy="892" rx="560" ry="24" style={{ fill: "var(--shade)", opacity: 0.18, mixBlendMode: "multiply" }} />
       {Art("wallpaper")}
 
       {/* window view: outlined too, clipped to the glass */}
       <g clipPath={`url(#glass${uid})`}>
         {/* the sky itself stays smooth; pencil grain on a large flat fill reads as TV static */}
         <rect x="522" y="118" width="396" height="364" fill={`url(#sky${uid})`} />
-        <g className="lineart" filter={lineFilter}>
+        <g className="lineart" filter={pencil}>
           <Sky phase={phase} uid={uid} />
           <View view={view} />
         </g>
       </g>
 
       {/* the room: every opaque shape gets a colored-pencil outline (globals.css .lineart) */}
-      <g className="lineart" filter={lineFilter}>
+      <g className="lineart" filter={pencil}>
         <rect y="706" width="1440" height="16" fill={v("cream")} />
         {[770, 820, 870].map((y) => (
           <rect key={y} y={y} width="1440" height="2" fill={v("floor-d")} opacity="0.5" />
@@ -216,17 +152,6 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
         {Art("deskObject2") ?? <BaseDeskObjects />}
       </g>
 
-      {/* lofi duotone (SPEC §4.3): mask each layer, not a group, so multiply reaches the room */}
-      <rect width="1440" height="900" mask={`url(#duo-shadow${uid})`} style={{ fill: "var(--duo-shadow)", mixBlendMode: "multiply" }} />
-      <rect width="1440" height="900" mask={`url(#duo-light${uid})`} style={{ fill: "var(--duo-light)", mixBlendMode: "multiply" }} />
-      {glows.map((g, i) =>
-        g.color ? (
-          // neon is its own light source: still faintly visible at midday
-          <circle key={i} cx={g.cx} cy={g.cy} r={g.r} fill={`url(#glow-${g.color}${uid})`} style={{ opacity: "max(var(--glow), 0.35)", mixBlendMode: "screen" }} />
-        ) : (
-          <circle key={i} cx={g.cx} cy={g.cy} r={g.r} fill={`url(#glow${uid})`} style={{ opacity: "var(--glow)", mixBlendMode: "screen" }} />
-        ),
-      )}
 
       {highlight !== undefined && (
         <g>
@@ -418,37 +343,6 @@ function View({ view }: { view: WindowView }) {
         {[[560, 420], [640, 430], [790, 418], [870, 432], [700, 440]].map(([x, y], i) => (
           <circle key={i} cx={x} cy={y} r="6" fill={v("cream")} />
         ))}
-      </g>
-    );
-  }
-  if (view === "city") {
-    // Night skyline; lit windows are light, so they carry the neon colors.
-    const towers: [number, number, number][] = [
-      [508, 380, 58], [570, 330, 46], [620, 400, 70], [694, 300, 52], [750, 360, 64], [818, 320, 48], [870, 390, 60],
-    ];
-    return (
-      <g>
-        {towers.map(([x, top, w]) => (
-          <rect key={x} x={x} y={top} width={w} height={500 - top} fill={v("white")} />
-        ))}
-        <path d="M720 300 V270" stroke="var(--line-art)" strokeWidth="2" />
-        {towers.flatMap(([x, top, w], ti) =>
-          Array.from({ length: Math.floor((482 - top) / 22) }, (_, r) =>
-            [0, 1].map((c) =>
-              (ti + r + c) % 3 === 0 ? null : (
-                <rect
-                  key={`${x}-${r}-${c}`}
-                  x={x + 8 + c * (w / 2)}
-                  y={top + 10 + r * 22}
-                  width={w / 2 - 16}
-                  height="8"
-                  opacity="0.85"
-                  style={{ fill: (ti + r) % 2 ? "var(--neon-cyan)" : "var(--neon-pink)" }}
-                />
-              ),
-            ),
-          ),
-        )}
       </g>
     );
   }

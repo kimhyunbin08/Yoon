@@ -1,6 +1,6 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { PIECES, PIECE_BY_ID, RARITY_KO, THEME_BY_ID, WINDOW_INFO, type ItemId, type Slot, type ThemeId } from "../content/catalog";
+import { PIECES, PIECE_BY_ID, THEME_BY_ID, type ItemId, type Slot, type ThemeId } from "../content/catalog";
 import * as game from "../lib/game";
 import { store, useStore } from "../lib/store";
 import { Controls, Menu, TimerPill, Toasts, WindowChip, fmtDuration, useNow, type PanelId, type Toast } from "./Hud";
@@ -39,20 +39,11 @@ export default function App() {
   const announce = useCallback(
     (drops: game.Drop[], away = false) => {
       // One toast per 5-minute drop; a catch-up of several drops collapses into one.
-      const groups = Map.groupBy(drops, (d) => d.at);
-      if (groups.size > 2) {
-        toast(`${away ? "자리를 비운 동안 " : ""}조각 ${drops.length}개를 얻었어요`);
+      if (drops.length > 2) {
+        toast(`${away ? "자리를 비운 동안 " : ""}조각 ${drops.reduce((n, d) => n + d.count, 0)}개를 얻었어요`);
         return;
       }
-      for (const group of groups.values()) {
-        const names = Map.groupBy(group, (d) => d.pieceId);
-        const list = [...names].map(([id, ds]) => {
-          const tag = ds[0].rarity === "common" ? "" : `(${RARITY_KO[ds[0].rarity]})`;
-          return `${PIECE_BY_ID[id].nameKo}${tag}${ds.length > 1 ? ` ×${ds.length}` : ""}`;
-        });
-        const tone = group.some((d) => d.rarity === "special") ? "special" : group.some((d) => d.rarity === "rare") ? "rare" : undefined;
-        toast(`${WINDOW_INFO[group[0].window].nameKo} 조각 ${group.length}개 · ${list.join(", ")}`, tone);
-      }
+      for (const d of drops) toast(`${PIECE_BY_ID[d.window].nameKo} ${d.count}개를 얻었어요`);
     },
     [toast],
   );

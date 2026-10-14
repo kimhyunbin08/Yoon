@@ -1,17 +1,13 @@
 "use client";
 import { useEffect, useState, type ComponentType } from "react";
 import type { ItemId } from "../../content/catalog";
-import { CAFE_ART, CAFE_GLOWS } from "./themes/cafe";
-import { CAT_ART, CAT_GLOWS } from "./themes/cat";
-import { GARDEN_ART, GARDEN_GLOWS } from "./themes/garden";
-import { NEON_ART, NEON_GLOWS } from "./themes/neon";
-import { STARRY_ART, STARRY_GLOWS } from "./themes/starry";
-import { Glitch, NEON_CYAN, NEON_PINK, v } from "./shared";
+import { CAFE_ART } from "./themes/cafe";
+import { CAT_ART } from "./themes/cat";
+import { GARDEN_ART } from "./themes/garden";
+import { STARRY_ART } from "./themes/starry";
+import { v } from "./shared";
 
 // Original room item art in 1440x900 stage coordinates. Each item draws itself inside its slot (Room SLOT_RECTS).
-
-/** A light source; `color` marks neon light that stays faintly visible in daytime. */
-export type Glow = { cx: number; cy: number; r: number; color?: "pink" | "cyan" };
 
 function Curtains({ fill, tie }: { fill: string; tie: string }) {
   return (
@@ -249,113 +245,12 @@ function MoonClock() {
   );
 }
 
-
-// ---------- neon glitch theme (retro punk) ----------
-// Neon tubes, the CRT screen, and lit city windows emit light, so they are the only theme parts with color.
-
-function CityWindow() {
-  // Half-lowered blinds over the top of the glass.
-  return (
-    <Glitch>
-      <rect x="470" y="80" width="500" height="10" rx="5" fill={v("wood-d")} />
-      {Array.from({ length: 8 }, (_, i) => (
-        <rect key={i} x="524" y={98 + i * 16} width="392" height="10" rx="2" fill={v("white")} />
-      ))}
-      <path d="M560 96 V250 M880 96 V250" stroke="var(--line-art)" strokeWidth="1.5" fill="none" />
-      <rect x="552" y="246" width="16" height="10" rx="3" fill={v("white")} />
-      <rect x="872" y="246" width="16" height="10" rx="3" fill={v("white")} />
-    </Glitch>
-  );
-}
-
-function NeonSign() {
-  return (
-    <Glitch>
-      <path d="M1130 150 L1120 200 M1280 150 L1290 200" stroke="var(--line-art)" strokeWidth="2" fill="none" />
-      <rect x="1090" y="200" width="230" height="130" rx="16" fill={v("white")} />
-      {/* the tube, then a cyan ghost knocked a few px off: a frozen glitch */}
-      <text x="1209" y="284" textAnchor="middle" fontSize="58" fontWeight="800" letterSpacing="4" fill="none" stroke={NEON_CYAN} strokeWidth="2" opacity="0.7">
-        STILL
-      </text>
-      <text x="1205" y="282" textAnchor="middle" fontSize="58" fontWeight="800" letterSpacing="4" fill="none" stroke={NEON_PINK} strokeWidth="3.5">
-        STILL
-      </text>
-      <path d="M1118 306 l18 -8 l18 8 l18 -8 l18 8 l18 -8 l18 8 l18 -8 l18 8 l18 -8 l18 8 l18 -8 l10 4" stroke={NEON_CYAN} strokeWidth="3" fill="none" strokeLinejoin="round" />
-      <rect x="1104" y="250" width="96" height="5" fill={NEON_CYAN} opacity="0.55" />
-      <rect x="1230" y="232" width="70" height="4" fill={NEON_PINK} opacity="0.5" />
-    </Glitch>
-  );
-}
-
-function NeonTube() {
-  return (
-    <Glitch>
-      <path d="M470 0 V40 M970 0 V40" stroke="var(--line-art)" strokeWidth="2" fill="none" />
-      <rect x="456" y="36" width="28" height="18" rx="4" fill={v("white")} />
-      <rect x="956" y="36" width="28" height="18" rx="4" fill={v("white")} />
-      <rect x="420" y="40" width="600" height="10" rx="5" style={{ fill: NEON_CYAN }} />
-      <rect x="610" y="42" width="150" height="5" fill={NEON_PINK} opacity="0.85" />
-    </Glitch>
-  );
-}
-
-function CrtMonitor() {
-  return (
-    <Glitch>
-      <rect x="362" y="586" width="96" height="14" rx="4" fill={v("white")} />
-      <rect x="384" y="572" width="52" height="16" fill={v("white")} />
-      <path d="M300 470 Q300 452 318 450 H502 Q520 452 520 470 V556 Q520 574 502 576 H318 Q300 574 300 556 Z" fill={v("white")} />
-      {/* the screen is the light source: dark glass, glowing content */}
-      <rect x="316" y="464" width="156" height="98" rx="16" style={{ fill: "var(--c-ink)" }} />
-      {Array.from({ length: 12 }, (_, i) => (
-        <rect key={i} x="320" y={468 + i * 8} width="148" height="1.5" fill={NEON_CYAN} opacity="0.18" />
-      ))}
-      <rect x="332" y="484" width="70" height="7" fill={NEON_CYAN} opacity="0.9" />
-      <rect x="338" y="484" width="70" height="7" fill={NEON_PINK} opacity="0.45" />
-      <rect x="332" y="500" width="110" height="5" fill={NEON_CYAN} opacity="0.6" />
-      <rect x="332" y="512" width="46" height="5" fill={NEON_CYAN} opacity="0.6" />
-      <rect x="352" y="528" width="96" height="9" fill={NEON_PINK} opacity="0.75" />
-      <rect x="332" y="544" width="24" height="7" fill={NEON_CYAN} opacity="0.9" />
-      <circle cx="496" cy="490" r="7" fill={v("white")} />
-      <circle cx="496" cy="512" r="7" fill={v("white")} />
-      <path d="M486 532 h20 M486 540 h20 M486 548 h20" stroke="var(--line-art)" strokeWidth="1.5" fill="none" />
-    </Glitch>
-  );
-}
-
-function Boombox() {
-  return (
-    <Glitch>
-      {/* handle: a white tube with a pencil outline */}
-      <path d="M150 262 V246 Q150 236 160 236 H250 Q260 236 260 246 V262" stroke="var(--line-art)" strokeWidth="9" fill="none" strokeLinecap="round" />
-      <path d="M150 262 V246 Q150 236 160 236 H250 Q260 236 260 246 V262" stroke={v("white")} strokeWidth="5" fill="none" strokeLinecap="round" />
-      <path d="M272 262 L300 214" stroke="var(--line-art)" strokeWidth="2" fill="none" />
-      <rect x="116" y="258" width="178" height="72" rx="12" fill={v("white")} />
-      <circle cx="158" cy="296" r="24" fill={v("white")} />
-      <circle cx="158" cy="296" r="10" fill={v("white")} />
-      <circle cx="252" cy="296" r="24" fill={v("white")} />
-      <circle cx="252" cy="296" r="10" fill={v("white")} />
-      <rect x="186" y="282" width="38" height="26" rx="3" fill={v("white")} />
-      <rect x="192" y="266" width="26" height="6" fill={NEON_CYAN} opacity="0.85" />
-      {[282, 298, 314].map((y, i) => (
-        <g key={y}>
-          <rect x={308 + (i % 2) * 6} y={y} width="78" height="16" rx="3" fill={v("white")} />
-          <circle cx={330 + (i % 2) * 6} cy={y + 8} r="4" fill={v("white")} />
-          <circle cx={364 + (i % 2) * 6} cy={y + 8} r="4" fill={v("white")} />
-        </g>
-      ))}
-      <rect x="300" y="304" width="60" height="4" fill={NEON_PINK} opacity="0.6" />
-    </Glitch>
-  );
-}
-
 // Window views are drawn by Room from the windowView item's `view`, so they have no component here.
 export const ITEM_ART: Partial<Record<ItemId, ComponentType>> = {
   ...GARDEN_ART,
   ...CAFE_ART,
   ...CAT_ART,
   ...STARRY_ART,
-  ...NEON_ART,
   "garden-window": GardenWindow,
   "garden-plants": GardenPlants,
   "garden-rug": GardenRug,
@@ -369,23 +264,5 @@ export const ITEM_ART: Partial<Record<ItemId, ComponentType>> = {
   "star-garland": StarGarland,
   "candle-books": CandleBooks,
   "moon-clock": MoonClock,
-  "city-window": CityWindow,
-  "neon-sign": NeonSign,
-  "boombox": Boombox,
-  "neon-tube": NeonTube,
-  "crt-monitor": CrtMonitor,
 };
 
-export const ITEM_GLOWS: Partial<Record<string, Glow[]>> = {
-  ...GARDEN_GLOWS,
-  ...CAFE_GLOWS,
-  ...CAT_GLOWS,
-  ...STARRY_GLOWS,
-  ...NEON_GLOWS,
-  "pendant-lamp": [{ cx: 1000, cy: 300, r: 260 }],
-  "star-garland": GARLAND.map(([x, y]) => ({ cx: x, cy: y + 6, r: 36 })),
-  "candle-books": [{ cx: 400, cy: 460, r: 150 }],
-  "neon-sign": [{ cx: 1205, cy: 270, r: 240, color: "pink" }],
-  "neon-tube": [480, 600, 720, 840, 960].map((cx) => ({ cx, cy: 46, r: 130, color: "cyan" as const })),
-  "crt-monitor": [{ cx: 394, cy: 512, r: 200, color: "cyan" }],
-};

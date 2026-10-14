@@ -1,7 +1,6 @@
 "use client";
 import type { ComponentType } from "react";
 import type { ItemId } from "../../../content/catalog";
-import type { Glow } from "../items";
 import { CalendarFace, INK, Tube, v } from "../shared";
 
 // 새벽 정원 (dawn-garden): leaves, paper, and watering. Pre-v5 items (curtains, plant shelf, rug) live in items.tsx.
@@ -107,8 +106,4 @@ export const GARDEN_ART: Partial<Record<ItemId, ComponentType>> = {
   "watering-can": WateringCan,
   "flower-notebook": FlowerNotebook,
   "fern-pot": FernPot,
-};
-
-export const GARDEN_GLOWS: Partial<Record<string, Glow[]>> = {
-  "paper-lantern": [{ cx: 1000, cy: 200, r: 240 }],
 };

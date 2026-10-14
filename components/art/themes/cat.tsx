@@ -1,7 +1,6 @@
 "use client";
 import type { ComponentType } from "react";
 import type { ItemId } from "../../../content/catalog";
-import type { Glow } from "../items";
 import { CalendarFace, INK, Tube, v } from "../shared";
 
 // 노을 고양이 (sunset-cat): dots, paws, and yarn. Pre-v5 items (sleeping cat, poster, books) live in items.tsx.
@@ -83,8 +82,4 @@ export const CAT_ART: Partial<Record<ItemId, ComponentType>> = {
   "cat-calendar": CatCalendar,
   "paw-desk": PawDesk,
   "cat-grass": CatGrass,
-};
-
-export const CAT_GLOWS: Partial<Record<string, Glow[]>> = {
-  "cat-lamp": [{ cx: 1110, cy: 540, r: 250 }],
 };

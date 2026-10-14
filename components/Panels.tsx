@@ -4,12 +4,10 @@ import {
   ITEMS,
   PIECES,
   PIECE_BY_ID,
-  RARITY_KO,
   SLOTS,
   SLOT_KO,
   THEMES,
   THEME_BY_ID,
-  WINDOWS,
   WINDOW_INFO,
   type ItemId,
   type PieceId,
@@ -37,66 +35,31 @@ function Drawer({ title, onClose, children }: { title: string; onClose: () => vo
   );
 }
 
-const rarityRing = { common: "ring-line", rare: "ring-rare", special: "ring-special" } as const;
 const hours = (w: keyof typeof WINDOW_INFO) => `${WINDOW_INFO[w].from}시–${WINDOW_INFO[w].to}시`;
 
 export function PiecesPanel({ now, onClose }: { now: number; onClose: () => void }) {
   const pieces = useStore((s) => s.state.pieces);
-  const [tab, setTab] = useState(() => windowAt(now));
-  const [selected, setSelected] = useState<PieceId | null>(null);
-  const owned = PIECES.filter((p) => pieces[p.id]).length;
-  const sel = selected ? PIECE_BY_ID[selected] : null;
-
+  const current = windowAt(now);
   return (
     <Drawer title="조각함" onClose={onClose}>
-      <p className="mb-4 text-sm text-muted">모은 종류 {owned} / {PIECES.length}</p>
-      <div role="tablist" className="mb-4 grid grid-cols-4 gap-1 rounded-full bg-line p-1">
-        {WINDOWS.map((w) => (
-          <button
-            key={w}
-            role="tab"
-            type="button"
-            aria-selected={tab === w}
-            onClick={() => setTab(w)}
-            className={`h-9 rounded-full text-sm ${tab === w ? "bg-surface-solid font-semibold shadow" : "text-muted"}`}
+      <p className="mb-4 text-sm text-muted">공부한 시간대의 조각이 5분마다 1~5개씩 모여요.</p>
+      <div className="grid grid-cols-2 gap-3">
+        {PIECES.map((p) => (
+          <div
+            key={p.id}
+            className={`flex flex-col items-center gap-2 rounded-2xl bg-surface-solid p-4 ring-2 ${p.window === current ? "ring-ring" : "ring-transparent"}`}
           >
-            {WINDOW_INFO[w].nameKo}
-          </button>
+            <PieceIcon id={p.id} size={72} />
+            <p className="font-semibold">{p.nameKo}</p>
+            <p className="tabular text-2xl font-semibold">{pieces[p.id] ?? 0}</p>
+            <p className="text-xs text-muted">
+              {hours(p.window)}
+              {p.window === current && " · 지금"}
+            </p>
+            <p className="text-xs text-muted">{THEMES.filter((t) => p.id in t.recipe).map((t) => t.nameKo).join(", ") || "쓰는 테마 없음"}</p>
+          </div>
         ))}
       </div>
-      <p className="mb-3 text-xs text-muted">{hours(tab)}에 공부하면 나와요</p>
-      <div className="grid grid-cols-3 gap-3">
-        {PIECES.filter((p) => p.window === tab).map((p) => {
-          const n = pieces[p.id] ?? 0;
-          return (
-            <button
-              key={p.id}
-              type="button"
-              onClick={() => setSelected(p.id)}
-              aria-pressed={selected === p.id}
-              className={`relative flex flex-col items-center gap-1 rounded-2xl bg-surface-solid p-3 ring-2 ${n ? rarityRing[p.rarity] : "ring-transparent"} ${selected === p.id ? "outline outline-2 outline-ring" : ""}`}
-            >
-              <PieceIcon id={p.id} size={56} locked={!n} />
-              <span className="text-xs">{n ? p.nameKo : "???"}</span>
-              {n > 0 && <span className="tabular absolute right-2 top-2 text-xs text-muted">×{n}</span>}
-            </button>
-          );
-        })}
-      </div>
-      {sel && (
-        <div className="mt-5 flex items-center gap-4 rounded-2xl bg-surface-solid p-4">
-          <PieceIcon id={sel.id} size={72} locked={!pieces[sel.id]} />
-          <div className="text-sm">
-            <p className="font-semibold">{pieces[sel.id] ? sel.nameKo : "아직 없는 조각"}</p>
-            <p className="text-muted">
-              {RARITY_KO[sel.rarity]} · {WINDOW_INFO[sel.window].nameKo} {hours(sel.window)}
-            </p>
-            <p className="mt-1 text-muted">
-              쓰이는 테마: {THEMES.filter((t) => sel.id in t.recipe).map((t) => t.nameKo).join(", ") || "없음"}
-            </p>
-          </div>
-        </div>
-      )}
     </Drawer>
   );
 }
@@ -137,11 +100,12 @@ export function ThemesPanel({
                       return (
                         <li
                           key={id}
-                          title={`${p.nameKo} · ${WINDOW_INFO[p.window].nameKo}`}
+                          title={p.nameKo}
                           className={`flex items-center gap-1 rounded-full py-1 pl-1 pr-3 text-xs ${have >= qty ? "bg-mint/50" : "bg-line"}`}
                         >
-                          <PieceIcon id={p.id} size={22} locked={have === 0} />
-                          <span className="tabular">
+                          <PieceIcon id={p.id} size={22} />
+                          <span>{p.nameKo}</span>
+                          <span className="tabular font-semibold">
                             {have}/{qty}
                           </span>
                         </li>
@@ -151,7 +115,7 @@ export function ThemesPanel({
                 )}
                 {!unlocked && missing.length > 0 && (
                   <p className="mb-3 text-xs text-muted">
-                    부족: {missing.map((m) => `${WINDOW_INFO[PIECE_BY_ID[m.pieceId].window].nameKo} ${PIECE_BY_ID[m.pieceId].nameKo} ${m.need}`).join(" · ")}
+                    부족: {missing.map((m) => `${PIECE_BY_ID[m.pieceId].nameKo} ${m.need}개`).join(" · ")}
                   </p>
                 )}
                 {unlocked ? (

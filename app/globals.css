@@ -1,12 +1,9 @@
 @import "pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css";
 @import "tailwindcss";
 
-/* Registered so the sky and room tint cross-fade when the phase changes. */
+/* Registered so the sky and pencil ink cross-fade when the phase changes. */
 @property --sky-top { syntax: "<color>"; inherits: true; initial-value: #cfe8fb; }
 @property --sky-bottom { syntax: "<color>"; inherits: true; initial-value: #f4fbff; }
-@property --phase-light { syntax: "<color>"; inherits: true; initial-value: #fff1c9; }
-@property --phase-shadow { syntax: "<color>"; inherits: true; initial-value: #b4d4ee; }
-@property --glow { syntax: "<number>"; inherits: true; initial-value: 0; }
 @property --prism-1 { syntax: "<color>"; inherits: true; initial-value: #bfe6f7; }
 @property --prism-2 { syntax: "<color>"; inherits: true; initial-value: #cfefe3; }
 @property --prism-3 { syntax: "<color>"; inherits: true; initial-value: #fff6e5; }
@@ -28,6 +25,12 @@
   --rare: #9ec5f2;
   --special: #f2c97e;
   --line: rgb(59 58 69 / 0.08);
+  /* window pieces: one soft facet each (SPEC §2.4) */
+  --piece-dawn: #ffd6e2;
+  --piece-day: #fff0b8;
+  --piece-evening: #ffd2b0;
+  --piece-night: #ddd8ff;
+  --piece-shade: #f4f2ee;
   --silhouette: brightness(0);
 
   /* Art palette: every SVG fill goes through these. */
@@ -60,31 +63,22 @@
   --c-ink: #4a4857;
   --c-tower: #f7f1ff;
   --c-tower-d: #d9cfee;
-  --c-glow: #ffe6a8;
 
   --sky-top: color-mix(in oklab, #87ceeb 60%, white);
   --sky-bottom: #f0f8ff;
-  --phase-light: #fff1c9;
-  --phase-shadow: #b4d4ee;
-  --glow: 0;
+ 
 
   --prism-1: #bfe6f7;
   --prism-2: #cfefe3;
   --prism-3: #fff6e5;
-  /* lofi line art: ink and shade are tinted by the current phase */
+  /* lofi line art: the pencil ink is tinted by the current phase */
   --line-art: color-mix(in oklab, var(--prism-1) 30%, #4a4857);
-  --shade: color-mix(in oklab, var(--prism-1) 55%, #4a4857);
  
-  /* neon glitch theme: light-emitting parts only (SPEC §4.3) */
-  --neon-pink: #ff9ecf; /* soft: the neon theme must be easy on the eyes */
-  --neon-cyan: #8fd8ff;
-  --neon-wall-top: #ffd9ec; /* neon wallpaper: pastel pink to sky */
-  --neon-wall-bottom: #cdebff;
   /* window light: a saturated color per phase (SPEC §4.3) */
   --light: #ffd27a;
  
 
-  transition: --sky-top 2s ease, --sky-bottom 2s ease, --phase-light 2s ease, --phase-shadow 2s ease, --glow 2s ease,
+  transition: --sky-top 2s ease, --sky-bottom 2s ease,
     --prism-1 2s ease, --prism-2 2s ease, --prism-3 2s ease,
     --light 2s ease;
 }
@@ -107,14 +101,14 @@
 }
 
 /* Eight sky phases. Source palette from the mood board, softened toward white/lavender to stay pastel. */
-:root[data-sky="predawn"] { --sky-top: color-mix(in oklab, #708090 75%, #b9a7e8); --sky-bottom: color-mix(in oklab, #4b0082 45%, #b9a7e8); --glow: 0.7; --prism-1: #cbbef0; --prism-2: #b8c4e8; --prism-3: #f2d4e4; --light: #8e9bea; --phase-light: #f2d9ef; --phase-shadow: #8f9ad8; }
-:root[data-sky="dawn"] { --sky-top: #e6e6fa; --sky-bottom: #ffd1dc; --glow: 0.25; --prism-1: #ffd1dc; --prism-2: #e6e6fa; --prism-3: #ffe1cc; --light: #ff9db8; --phase-light: #ffd6c2; --phase-shadow: #a9a6e0; }
-:root[data-sky="morning"] { --sky-top: color-mix(in oklab, #87ceeb 60%, white); --sky-bottom: #f0f8ff; --glow: 0; --prism-1: #bfe6f7; --prism-2: #cfefe3; --prism-3: #fff6e5; --light: #ffd27a; --phase-light: #ffe7b8; --phase-shadow: #a8c8ea; }
-:root[data-sky="midday"] { --sky-top: color-mix(in oklab, #00bfff 55%, white); --sky-bottom: #ffffff; --glow: 0; --prism-1: #b8e4fa; --prism-2: #e3f4ff; --prism-3: #d3f2e6; --light: #ffe27a; --phase-light: #fff1c9; --phase-shadow: #b4d4ee; }
-:root[data-sky="afternoon"] { --sky-top: color-mix(in oklab, #ffd700 45%, white); --sky-bottom: #f5f5dc; --glow: 0.1; --prism-1: #ffe9a8; --prism-2: #f5f0da; --prism-3: #ffdcc2; --light: #ffb95c; --phase-light: #ffd9a0; --phase-shadow: #a9b8e6; }
-:root[data-sky="evening"] { --sky-top: color-mix(in oklab, #ffa500 55%, white); --sky-bottom: color-mix(in oklab, #ff7f50 65%, white); --glow: 0.5; --prism-1: #ffd0a8; --prism-2: #ffc1b0; --prism-3: #fbd3dc; --light: #ff8556; --phase-light: #ffb98f; --phase-shadow: #8f8fd6; }
-:root[data-sky="twilight"] { --sky-top: color-mix(in oklab, #4b0082 70%, #b9a7e8); --sky-bottom: color-mix(in oklab, #ff00ff 45%, white); --glow: 0.75; --prism-1: #d9c6f2; --prism-2: #f6c6ea; --prism-3: #ffd6c8; --light: #c27bff; --phase-light: #f4a7c4; --phase-shadow: #7d74c9; }
-:root[data-sky="night"] { --sky-top: color-mix(in oklab, #191970 85%, #b9a7e8); --sky-bottom: color-mix(in oklab, #000080 70%, #b9a7e8); --glow: 0.85; --prism-1: #c9c3ee; --prism-2: #b9c3ec; --prism-3: #e9cfea; --light: #7c8bff; --phase-light: #c9c6f5; --phase-shadow: #5e63a8; }
+:root[data-sky="predawn"] { --sky-top: color-mix(in oklab, #708090 75%, #b9a7e8); --sky-bottom: color-mix(in oklab, #4b0082 45%, #b9a7e8); --prism-1: #cbbef0; --prism-2: #b8c4e8; --prism-3: #f2d4e4; --light: #8e9bea; }
+:root[data-sky="dawn"] { --sky-top: #e6e6fa; --sky-bottom: #ffd1dc; --prism-1: #ffd1dc; --prism-2: #e6e6fa; --prism-3: #ffe1cc; --light: #ff9db8; }
+:root[data-sky="morning"] { --sky-top: color-mix(in oklab, #87ceeb 60%, white); --sky-bottom: #f0f8ff; --prism-1: #bfe6f7; --prism-2: #cfefe3; --prism-3: #fff6e5; --light: #ffd27a; }
+:root[data-sky="midday"] { --sky-top: color-mix(in oklab, #00bfff 55%, white); --sky-bottom: #ffffff; --prism-1: #b8e4fa; --prism-2: #e3f4ff; --prism-3: #d3f2e6; --light: #ffe27a; }
+:root[data-sky="afternoon"] { --sky-top: color-mix(in oklab, #ffd700 45%, white); --sky-bottom: #f5f5dc; --prism-1: #ffe9a8; --prism-2: #f5f0da; --prism-3: #ffdcc2; --light: #ffb95c; }
+:root[data-sky="evening"] { --sky-top: color-mix(in oklab, #ffa500 55%, white); --sky-bottom: color-mix(in oklab, #ff7f50 65%, white); --prism-1: #ffd0a8; --prism-2: #ffc1b0; --prism-3: #fbd3dc; --light: #ff8556; }
+:root[data-sky="twilight"] { --sky-top: color-mix(in oklab, #4b0082 70%, #b9a7e8); --sky-bottom: color-mix(in oklab, #ff00ff 45%, white); --prism-1: #d9c6f2; --prism-2: #f6c6ea; --prism-3: #ffd6c8; --light: #c27bff; }
+:root[data-sky="night"] { --sky-top: color-mix(in oklab, #191970 85%, #b9a7e8); --sky-bottom: color-mix(in oklab, #000080 70%, #b9a7e8); --prism-1: #c9c3ee; --prism-2: #b9c3ec; --prism-3: #e9cfea; --light: #7c8bff; }
 
 @theme inline {
   --color-bg: var(--bg);
@@ -261,15 +255,3 @@ body {
 .lineart .scale-down :is(path, rect, circle, ellipse):not([stroke]):not([opacity]):not(.no-line) {
   stroke-width: 4.6; /* 2.2 / 0.48 */
 }
-
-/* Lofi duotone (SPEC §4.3, D16): light area and shadow area colors for the room theme.
-   Each phase has a pair; the room theme's pair is mixed in at 35%. Neon glitch is fixed and separate. */
-.room {
-  --duo-light: color-mix(in oklab, var(--phase-light) 65%, var(--theme-light, var(--phase-light)));
-  --duo-shadow: color-mix(in oklab, var(--phase-shadow) 65%, var(--theme-shadow, var(--phase-shadow)));
-}
-.room[data-room-theme="dawn-garden"] { --theme-light: #d8f0d0; --theme-shadow: #7fb3a0; }
-.room[data-room-theme="sunny-cafe"] { --theme-light: #ffe2b8; --theme-shadow: #b9957a; }
-.room[data-room-theme="sunset-cat"] { --theme-light: #ffc9b0; --theme-shadow: #c9879a; }
-.room[data-room-theme="starry-library"] { --theme-light: #d6d0ff; --theme-shadow: #6f78c4; }
-.room[data-room-theme="neon-glitch"] { --duo-light: #ffd6ec; --duo-shadow: #bfe6ff; }

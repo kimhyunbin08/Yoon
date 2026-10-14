@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, type ReactNode } from "react";
-import { PIECES, WINDOW_INFO } from "../content/catalog";
+import { PIECE_BY_ID, WINDOW_INFO } from "../content/catalog";
 import { dayKey, focusedMs, nextWindowChange, studiedOn, timerStatus, windowAt } from "../lib/game";
 import { useStore } from "../lib/store";
 import { PieceIcon } from "./art/pieces";
@@ -56,10 +56,11 @@ export function WindowChip({ now }: { now: number }) {
         <strong className="font-semibold">{WINDOW_INFO[win].nameKo}</strong>
         <span className="text-muted"> · {WINDOW_INFO[next.window].nameKo}까지 {fmtDuration(next.at - now)}</span>
       </p>
-      <div className="flex gap-1" aria-label={`${WINDOW_INFO[win].nameKo}에 나오는 조각`}>
-        {PIECES.filter((p) => p.window === win).map((p) => (
-          <PieceIcon key={p.id} id={p.id} size={24} locked={!pieces[p.id]} />
-        ))}
+      <div className="flex items-center gap-2 text-sm" aria-label="지금 나오는 조각">
+        <PieceIcon id={win} size={28} />
+        <span>
+          {PIECE_BY_ID[win].nameKo} <span className="tabular font-semibold">{pieces[win] ?? 0}</span>개
+        </span>
       </div>
     </div>
   );

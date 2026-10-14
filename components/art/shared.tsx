@@ -4,11 +4,6 @@ import { useEffect, useState, type ReactNode } from "react";
 // Shared helpers for room item art (1440x900 stage coordinates).
 export const v = (name: string) => `var(--c-${name})`;
 export const INK = "var(--line-art)";
-export const NEON_PINK = "var(--neon-pink)";
-export const NEON_CYAN = "var(--neon-cyan)";
-
-/** Neon glitch theme: frozen RGB split. The filter is defined once per Room (<filter id="stillroom-rgbsplit">). */
-export const Glitch = ({ children }: { children: ReactNode }) => <g filter="url(#stillroom-rgbsplit)">{children}</g>;
 
 /** A white tube (handle, arm, stem) with a pencil outline: ink stroke underneath, white stroke on top. */
 export function Tube({ d, width = 6 }: { d: string; width?: number }) {

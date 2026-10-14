@@ -20,7 +20,7 @@ test("study, earn pieces, unlock a theme, persist across reload", async ({ page 
 
   // Load enough pieces through the backup import to unlock a theme.
   await page.keyboard.press("4");
-  const backup = { ...initialState(), pieces: { dew: 23, sunbeam: 19, sprout: 23, feather: 8, "pink-cloud": 8 } };
+  const backup = { ...initialState(), pieces: { dawn: 60, day: 20 } };
   await page.getByTestId("backup-input").setInputFiles({ name: "b.json", mimeType: "application/json", buffer: Buffer.from(JSON.stringify(backup)) });
   await page.getByRole("button", { name: "바꾸기" }).click();
   await page.keyboard.press("Escape");

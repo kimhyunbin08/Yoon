@@ -23,40 +23,13 @@ export const SKY_PHASES = [
 ] as const;
 export type SkyPhase = (typeof SKY_PHASES)[number]["id"];
 
-export type Rarity = "common" | "rare" | "special";
-export const RARITY_KO: Record<Rarity, string> = { common: "보통", rare: "희귀", special: "특별" };
-
-type PieceDef = { id: string; window: TimeWindow; rarity: Rarity; nameKo: string };
-
+// One currency per time window (SPEC §2.4, D17). Piece ids equal window ids.
 export const PIECES = [
-  { id: "dew", window: "dawn", rarity: "common", nameKo: "이슬" },
-  { id: "sunbeam", window: "dawn", rarity: "common", nameKo: "아침 햇살" },
-  { id: "mug", window: "dawn", rarity: "common", nameKo: "김 나는 머그" },
-  { id: "feather", window: "dawn", rarity: "rare", nameKo: "참새 깃털" },
-  { id: "pink-cloud", window: "dawn", rarity: "rare", nameKo: "분홍 구름" },
-  { id: "sunrise-marble", window: "dawn", rarity: "special", nameKo: "해돋이 구슬" },
-
-  { id: "cloud", window: "day", rarity: "common", nameKo: "뭉게구름" },
-  { id: "pencil", window: "day", rarity: "common", nameKo: "연필" },
-  { id: "sprout", window: "day", rarity: "common", nameKo: "새싹" },
-  { id: "paper-plane", window: "day", rarity: "rare", nameKo: "종이비행기" },
-  { id: "lemon-candy", window: "day", rarity: "rare", nameKo: "레몬 사탕" },
-  { id: "rainbow", window: "day", rarity: "special", nameKo: "무지개 조각" },
-
-  { id: "sunset-glass", window: "evening", rarity: "common", nameKo: "노을 유리" },
-  { id: "warm-light", window: "evening", rarity: "common", nameKo: "따뜻한 불빛" },
-  { id: "maple-leaf", window: "evening", rarity: "common", nameKo: "단풍잎" },
-  { id: "cat-bell", window: "evening", rarity: "rare", nameKo: "고양이 방울" },
-  { id: "cocoa", window: "evening", rarity: "rare", nameKo: "코코아" },
-  { id: "sunset-cat", window: "evening", rarity: "special", nameKo: "노을 고양이" },
-
-  { id: "star", window: "night", rarity: "common", nameKo: "별" },
-  { id: "candle", window: "night", rarity: "common", nameKo: "작은 초" },
-  { id: "firefly", window: "night", rarity: "common", nameKo: "반딧불" },
-  { id: "moon", window: "night", rarity: "rare", nameKo: "달 조각" },
-  { id: "letter", window: "night", rarity: "rare", nameKo: "밤 편지" },
-  { id: "aurora", window: "night", rarity: "special", nameKo: "오로라 조각" },
-] as const satisfies readonly PieceDef[];
+  { id: "dawn", window: "dawn", nameKo: "새벽의 조각" },
+  { id: "day", window: "day", nameKo: "낮의 조각" },
+  { id: "evening", window: "evening", nameKo: "노을의 조각" },
+  { id: "night", window: "night", nameKo: "밤의 조각" },
+] as const satisfies readonly { id: TimeWindow; window: TimeWindow; nameKo: string }[];
 export type PieceId = (typeof PIECES)[number]["id"];
 export type Piece = (typeof PIECES)[number];
 
@@ -99,37 +72,31 @@ export const THEMES = [
     id: "dawn-garden",
     nameKo: "새벽 정원",
     descriptionKo: "이슬 맺힌 화분과 하얀 커튼",
-    recipe: { dew: 23, sunbeam: 19, sprout: 23, feather: 8, "pink-cloud": 8 },
+    recipe: { dawn: 60, day: 20 },
   },
   {
     id: "sunny-cafe",
     nameKo: "햇살 카페",
     descriptionKo: "라떼 한 잔과 따뜻한 펜던트 조명",
-    recipe: { cloud: 23, pencil: 15, "lemon-candy": 8, "sunset-glass": 19, "warm-light": 19, cocoa: 8 },
+    recipe: { day: 45, evening: 45 },
   },
   {
     id: "sunset-cat",
     nameKo: "노을 고양이",
     descriptionKo: "방석 위에서 잠든 고양이",
-    recipe: { "sunset-glass": 23, "maple-leaf": 30, "warm-light": 15, "cat-bell": 8, "sunset-cat": 4 },
+    recipe: { evening: 80 },
   },
   {
     id: "starry-library",
     nameKo: "별밤 도서관",
     descriptionKo: "촛불, 별 전구, 밤바다가 보이는 창",
-    recipe: { star: 30, candle: 23, firefly: 23, moon: 8, letter: 8, aurora: 4, mug: 11 },
-  },
-  {
-    id: "neon-glitch",
-    nameKo: "네온 글리치",
-    descriptionKo: "CRT 화면과 네온 간판, 지지직거리는 밤",
-    recipe: { star: 23, firefly: 23, "warm-light": 19, "sunset-glass": 11, letter: 8, aurora: 4 },
+    recipe: { night: 95, dawn: 10 },
   },
 ] as const satisfies readonly ThemeDef[];
 export type ThemeId = (typeof THEMES)[number]["id"];
 export type Theme = (typeof THEMES)[number];
 
-export type WindowView = "hills" | "garden" | "sea" | "city" | "cafe" | "rooftops";
+export type WindowView = "hills" | "garden" | "sea" | "cafe" | "rooftops";
 type ItemDef = { id: string; themeId: ThemeId; slot: Slot; nameKo: string; view?: WindowView };
 
 // Each theme brings the 8–9 items that suit it, at most one per slot (SPEC §2.4).
@@ -174,15 +141,6 @@ export const ITEMS = [
   { id: "candle-books", themeId: "starry-library", slot: "deskObject1", nameKo: "촛불과 책" },
   { id: "floor-books", themeId: "starry-library", slot: "floor", nameKo: "책 더미" },
 
-  { id: "neon-wallpaper", themeId: "neon-glitch", slot: "wallpaper", nameKo: "네온 벽지" },
-  { id: "city-window", themeId: "neon-glitch", slot: "windowCover", nameKo: "블라인드" },
-  { id: "city-view", themeId: "neon-glitch", slot: "windowView", nameKo: "도시 야경", view: "city" },
-  { id: "neon-tube", themeId: "neon-glitch", slot: "lighting", nameKo: "네온 막대" },
-  { id: "neon-lamp", themeId: "neon-glitch", slot: "deskLamp", nameKo: "네온 스탠드" },
-  { id: "led-calendar", themeId: "neon-glitch", slot: "calendar", nameKo: "LED 달력" },
-  { id: "neon-sign", themeId: "neon-glitch", slot: "wallDecor", nameKo: "네온 간판" },
-  { id: "boombox", themeId: "neon-glitch", slot: "shelfObject", nameKo: "붐박스와 카세트" },
-  { id: "crt-monitor", themeId: "neon-glitch", slot: "deskObject1", nameKo: "CRT 모니터" },
 ] as const satisfies readonly ItemDef[];
 export type ItemId = (typeof ITEMS)[number]["id"];
 export type Item = (typeof ITEMS)[number];

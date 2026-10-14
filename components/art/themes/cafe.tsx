@@ -1,7 +1,6 @@
 "use client";
 import type { ComponentType } from "react";
 import type { ItemId } from "../../../content/catalog";
-import type { Glow } from "../items";
 import { CalendarFace, INK, Tube, v } from "../shared";
 
 // 햇살 카페 (sunny-cafe): stripes, brass, and coffee. Pre-v5 items (latte & cake, pendant, menu board) live in items.tsx.
@@ -91,8 +90,4 @@ export const CAFE_ART: Partial<Record<ItemId, ComponentType>> = {
   "tearoff-calendar": TearoffCalendar,
   "coffee-jars": CoffeeJars,
   "cafe-table": CafeTable,
-};
-
-export const CAFE_GLOWS: Partial<Record<string, Glow[]>> = {
-  "banker-lamp": [{ cx: 1105, cy: 560, r: 260 }],
 };
