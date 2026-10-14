@@ -3,7 +3,7 @@
 Instructions for coding agents (Claude Code, Codex) working in this repo.
 
 ## Project
-StillRoom: a personal pastel study-room PWA for one user, on one laptop. Timer → 1–5 random pieces every 5 focused minutes, by time of day → unlock themes → decorate the room. Local-only (IndexedDB), no database, no accounts of our own. One stateless route (`app/api/google/token`) for the optional Google Calendar sign-in.
+StillRoom: a personal pastel study-room PWA for one user, on one laptop. Timer → 1–5 random pieces every 5 focused minutes, by time of day → unlock themes → decorate the room. Local-only (IndexedDB), no database, no accounts of our own. Two stateless routes (`app/api/google/token`, `app/api/naver/caldav`) for the optional calendar connections.
 
 Live: https://stillroom-app.vercel.app (Vercel project `jogakbang`, team Meditor). Every push to `main` deploys to production.
 
@@ -21,7 +21,7 @@ npm run build        # static page + one function; env: NEXT_PUBLIC_GOOGLE_CLIEN
 
 ## Layout
 ```
-app/                 single page + globals.css (tokens, 8 sky phases); api/google/token (OAuth code/refresh exchange); privacy/ (policy for the OAuth consent screen)
+app/                 single page + globals.css (tokens, 8 sky phases); api/google/token (OAuth code/refresh exchange); api/naver/caldav (CalDAV read proxy); privacy/ (policy for the OAuth consent screen)
 components/App.tsx   timer actions, ticking, shortcuts, ambient mode, wake lock
 components/Room.tsx  room scene, slots, window view, window light, line-art group
 components/Hud.tsx   window chip, timer pill, controls, menu, toasts
@@ -31,6 +31,8 @@ lib/game.ts          pure game logic (no I/O)
 lib/todos.ts         pure to-do, 인장, and reward helpers (no I/O)
 lib/calendar.ts      pure agenda helpers: today's events from Calendar API items
 lib/google.ts        Google sign-in popup, token renewal, Calendar fetch, agenda store
+lib/naver.ts         Naver id + app password, CalDAV fetch through the route, agenda store
+lib/ical.ts          pure iCalendar (VEVENT) parser for CalDAV responses
 lib/store.ts         IndexedDB load/save, backup export/import
 content/catalog.ts   pieces, themes, 12 room slots, recipes, items (typed). Ids are persisted: add, never rename.
 public/              manifest, sw.js, icons

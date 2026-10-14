@@ -33,6 +33,7 @@ import {
 } from "../lib/todos";
 import { eventLabel, nextEventId, todayAgenda } from "../lib/calendar";
 import { connectGoogle, disconnectGoogle, googleEnabled, refreshAgenda, useGoogle } from "../lib/google";
+import { connectNaver, disconnectNaver, refreshNaver, useNaver } from "../lib/naver";
 import { exportBackup, readBackup, useStore } from "../lib/store";
 import { PieceIcon } from "./art/pieces";
 import { Icon, fmtDuration } from "./Hud";
@@ -445,7 +446,7 @@ export function TodoPanel({
       )}
       <p className="mb-6 text-xs text-muted">Space 체크 · 더블클릭 고치기 · Delete 지우기 · Alt+↑↓ 순서 · 끝낸 일은 자정에 정리돼요</p>
 
-      {googleEnabled && <CalendarSection now={now} />}
+      <CalendarSection now={now} />
 
       <section className="mb-6 rounded-2xl bg-surface-solid p-4" aria-label="인장">
         <div className="flex items-baseline justify-between">
@@ -520,68 +521,153 @@ export function TodoPanel({
   );
 }
 
-/** 캘린더 (SPEC US-12): today's events, connect once, refresh or disconnect. Hidden when no Google client id is configured. */
+/** 캘린더 (SPEC US-12, US-13): today's events from every connected calendar, then one row per source. */
 function CalendarSection({ now }: { now: number }) {
-  const status = useGoogle((g) => g.status);
-  const items = useGoogle((g) => g.items);
-  const events = todayAgenda(items, now);
+  const gItems = useGoogle((g) => g.items);
+  const nItems = useNaver((n) => n.items);
+  const gStatus = useGoogle((g) => g.status);
+  const nStatus = useNaver((n) => n.status);
+  const gBusy = useGoogle((g) => g.busy);
+  const nBusy = useNaver((n) => n.busy);
+  const busy = gBusy || nBusy;
+  const fetchedAt = Math.max(useGoogle((g) => g.fetchedAt) ?? 0, useNaver((n) => n.fetchedAt) ?? 0);
+  const events = todayAgenda([...gItems, ...nItems], now);
   const next = nextEventId(events);
-  const fetchedAt = useGoogle((g) => g.fetchedAt);
-  const busy = useGoogle((g) => g.busy);
+  const anyOn = gStatus === "on" || nStatus === "on";
+  const time = (t: number) => new Date(t).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return (
+    <section className="mb-6 rounded-2xl bg-surface-solid p-4" aria-label="캘린더">
+      <h3 className="mb-1 font-semibold">캘린더</h3>
+      {anyOn ? (
+        <>
+          <p className="mb-2 text-sm text-muted">{fetchedAt ? `마지막 업데이트 ${time(fetchedAt)}` : "불러오는 중"}</p>
+          <ul className="mb-3 flex flex-col gap-1 text-sm" aria-label="오늘 일정">
+            {events.length === 0 ? (
+              <li className="text-muted">오늘 남은 일정이 없어요.</li>
+            ) : (
+              events.map((e) => (
+                <li key={e.id} className={`truncate ${e.id === next ? "font-semibold underline" : ""}`}>
+                  {eventLabel(e)}
+                </li>
+              ))
+            )}
+          </ul>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => {
+              refreshAgenda();
+              refreshNaver();
+            }}
+            className="mb-3 h-9 rounded-full bg-line px-4 text-sm font-semibold disabled:opacity-50"
+          >
+            새로고침
+          </button>
+        </>
+      ) : (
+        <p className="mb-3 text-sm text-muted">오늘 일정을 벽 보드에 보여줘요. 읽기만 하고 고치지 않아요.</p>
+      )}
+      <div className="flex flex-col gap-3">
+        {googleEnabled && <GoogleRow />}
+        <NaverRow />
+      </div>
+    </section>
+  );
+}
+
+const pill = "h-9 rounded-full px-4 text-sm font-semibold";
+
+function GoogleRow() {
+  const status = useGoogle((g) => g.status);
   const [error, setError] = useState("");
-  const btn = "h-9 rounded-full px-4 text-sm font-semibold";
   const connect = () => {
     setError("");
     connectGoogle().catch((e: Error) =>
       setError(e.message === "popup_closed" ? "" : e.message === "NO_REFRESH_TOKEN" ? "한 번만 더 눌러 주세요." : "연결하지 못했어요. 잠시 후 다시 해 주세요."),
     );
   };
-  const time = (t: number) => new Date(t).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
   return (
-    <section className="mb-6 rounded-2xl bg-surface-solid p-4" aria-label="캘린더">
-      <h3 className="mb-1 font-semibold">캘린더</h3>
-      {status === "off" ? (
-        <>
-          <p className="mb-3 text-sm text-muted">오늘 일정을 벽 보드에 보여줘요. 읽기만 하고 고치지 않아요.</p>
-          <button type="button" onClick={connect} className={`${btn} bg-primary`}>
-            Google 캘린더 연결
+    <div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="flex-1 text-sm">Google 캘린더{status === "reconnect" && " · 연결이 끊겼어요"}</span>
+        {status !== "on" && (
+          <button type="button" onClick={connect} className={`${pill} bg-primary`}>
+            {status === "off" ? "연결" : "다시 연결"}
           </button>
-        </>
-      ) : (
-        <>
-          <p className="mb-3 text-sm text-muted">
-            {status === "reconnect" ? "연결이 끊겼어요. 다시 연결해 주세요." : fetchedAt ? `Google 캘린더 · 마지막 업데이트 ${time(fetchedAt)}` : "Google 캘린더 · 불러오는 중"}
-          </p>
-          {status === "on" && (
-            <ul className="mb-3 flex flex-col gap-1 text-sm" aria-label="오늘 일정">
-              {events.length === 0 ? (
-                <li className="text-muted">오늘 남은 일정이 없어요.</li>
-              ) : (
-                events.map((e) => (
-                  <li key={e.id} className={`truncate ${e.id === next ? "font-semibold underline" : ""}`}>
-                    {eventLabel(e)}
-                  </li>
-                ))
-              )}
-            </ul>
-          )}
+        )}
+        {status !== "off" && (
+          <button type="button" onClick={() => disconnectGoogle()} className={`${pill} bg-line`}>
+            연결 끊기
+          </button>
+        )}
+      </div>
+      {error && <p className="mt-1 text-sm text-muted">{error}</p>}
+    </div>
+  );
+}
+
+function NaverRow() {
+  const status = useNaver((n) => n.status);
+  const [form, setForm] = useState(false);
+  const [id, setId] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const input = "h-10 rounded-full bg-surface-solid px-4 text-sm outline-none ring-1 ring-line focus:ring-2 focus:ring-ring";
+  return (
+    <div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="flex-1 text-sm">네이버 캘린더{status === "reconnect" && " · 연결이 끊겼어요"}</span>
+        {status !== "on" && !form && (
+          <button type="button" onClick={() => setForm(true)} className={`${pill} bg-primary`}>
+            {status === "off" ? "연결" : "다시 연결"}
+          </button>
+        )}
+        {status !== "off" && (
+          <button type="button" onClick={() => disconnectNaver()} className={`${pill} bg-line`}>
+            연결 끊기
+          </button>
+        )}
+      </div>
+      {form && status !== "on" && (
+        <form
+          className="mt-2 flex flex-col gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            setError("");
+            setBusy(true);
+            connectNaver(id, password)
+              .then(() => {
+                setForm(false);
+                setPassword("");
+              })
+              .catch((err: Error) => setError(err.message === "AUTH" ? "아이디나 앱 비밀번호를 확인해 주세요." : "연결하지 못했어요. 잠시 후 다시 해 주세요."))
+              .finally(() => setBusy(false));
+          }}
+        >
+          <input value={id} onChange={(e) => setId(e.target.value)} placeholder="네이버 아이디" aria-label="네이버 아이디" autoComplete="username" required className={input} />
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="애플리케이션 비밀번호"
+            aria-label="네이버 애플리케이션 비밀번호"
+            autoComplete="off"
+            required
+            className={input}
+          />
+          <p className="text-xs text-muted">평소 비밀번호가 아니라 네이버 보안설정 → 2단계 인증 → 애플리케이션 비밀번호에서 만든 비밀번호예요. 이 브라우저에만 저장돼요.</p>
           <div className="flex gap-2">
-            {status === "reconnect" ? (
-              <button type="button" onClick={connect} className={`${btn} bg-primary`}>
-                다시 연결
-              </button>
-            ) : (
-              <button type="button" disabled={busy} onClick={() => refreshAgenda()} className={`${btn} bg-line disabled:opacity-50`}>
-                새로고침
-              </button>
-            )}
-            <button type="button" onClick={() => disconnectGoogle()} className={`${btn} bg-line`}>
-              연결 끊기
+            <button type="submit" disabled={busy} className={`${pill} bg-primary disabled:opacity-50`}>
+              {busy ? "확인 중" : "연결"}
+            </button>
+            <button type="button" onClick={() => setForm(false)} className={`${pill} bg-line`}>
+              취소
             </button>
           </div>
-        </>
+          {error && <p className="text-sm text-muted">{error}</p>}
+        </form>
       )}
-      {error && <p className="mt-2 text-sm text-muted">{error}</p>}
-    </section>
+    </div>
   );
 }

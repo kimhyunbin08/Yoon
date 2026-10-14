@@ -1,7 +1,7 @@
 # StillRoom — Product Spec
 
 Source: user interview (2026-10).
-Status: v0.20 (implemented; Naver Calendar planned, §7.6). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
+Status: v0.21 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
 Sections: 1 Ideation · 2 PRD · 3 TRD · 4 Design Spec · 5 Open Questions · 6 Market Research & Decisions · 7 Next Development Steps (planned, not built). Agent instructions live in `AGENTS.md`.
 
 Platform decision: **laptop only** (desktop browser, landscape). No phone, no tablet, no sync.
@@ -65,6 +65,7 @@ Accounts of our own (the optional Google sign-in only reads her calendar, D21), 
 | US-10 | keep today's to-dos on the wall | The calendar on the right wall is a paper board showing the date and up to 4 to-dos (open first, then today's done ones struck through, "+N" for the rest). An empty calendar slot shows a plain paper board. Click the board or press `5` to open the 할 일 drawer: Enter adds, click/Space checks, double-click edits, Delete removes, Alt+↑/↓ reorders. Done items clear at local midnight. Max 50 items, 80 chars each. No due times or alarms. |
 | US-11 | reward herself | Finishing **5 to-dos in a day earns 1 인장** (max 1 per day; unchecking below 5 the same day takes it back unless it was already spent). She writes her own rewards in the drawer ("나에게 주는 상", max 10). With **5 인장** she can claim one; it costs 5 and is logged with the date. Today's 인장 shows as a pencil stamp on the board. |
 | US-12 | see today's schedule on the wall | In the 할 일 drawer, "Google 캘린더 연결" opens Google's sign-in popup once; after that it stays connected (no re-login) until she presses "연결 끊기" or revokes access in her Google account. The board shows today's remaining events under the to-dos ("14:00 영어 스터디", all-day events as "종일"), the next one underlined, from every calendar she has checked in Google Calendar. The 할 일 drawer lists all of today's remaining events in its 캘린더 section (the board shows only what fits). Refreshes on open, every 15 min, and on "새로고침". Read-only. Offline keeps the last agenda; a revoked connection shows "캘린더 다시 연결" on the board, never a modal. |
+| US-13 | see her Naver Calendar too | In the 캘린더 section, "네이버 캘린더 연결" opens an inline form: 네이버 아이디 + 애플리케이션 비밀번호 (issued in Naver 보안설정 after 2-step verification; her normal password does not work). Events from all her Naver calendars join Google's on the board and in the drawer, same rules as US-12. A wrong id/password shows "아이디나 앱 비밀번호를 확인해 주세요"; a revoked one later shows "캘린더 다시 연결". "연결 끊기" forgets the id and password. |
 
 ### 2.4 Game rules
 **Time windows** (device local time):
@@ -146,6 +147,7 @@ Why no Supabase: one user, one laptop, no competition to protect. A backend adds
 ```
 - **Google connection (D21):** GIS code client in popup mode → `/api/google/token` exchanges the code (`redirect_uri: "postmessage"`) and returns a refresh token, kept only in her browser (IndexedDB key `google`, not in `State` or the backup). Access tokens (1 h) live in memory and are renewed through the same route without a popup. Scopes: `calendar.calendarlist.readonly` and `calendar.events.readonly`. The route only talks to `oauth2.googleapis.com`, requires `X-Requested-With: XmlHttpRequest` and a same-origin `Origin`, and logs nothing.
 - **OAuth branding:** home page `https://stillroom-app.vercel.app`, privacy policy `/privacy` (`app/privacy/page.tsx`, Korean), authorized domain `stillroom-app.vercel.app`; published "In production" without verification (she clicks through the unverified-app screen once).
+- **Naver connection (D22):** Naver has no public read API for Calendar and its CalDAV server (`caldav.calendar.naver.com`, HTTP Basic, no CORS) can't be called from the browser. `POST /api/naver/caldav` takes `{ id, password, timeMin, timeMax }`, discovers the calendars (current-user-principal → calendar-home-set → calendar collections), sends one `calendar-query` REPORT per calendar with server-side recurrence `expand`, parses the VEVENTs (`lib/ical.ts`, pure, unit tested) and returns them in the Google item shape so `lib/calendar.ts` handles both. Same guards as the Google route; only talks to `caldav.calendar.naver.com`; stores and logs nothing. Id and app password live only in her browser (IndexedDB key `naver`, not in `State` or the backup).
 - **Env:** `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (public) and `GOOGLE_CLIENT_SECRET` (Vercel only, never in the repo). Without the client id the calendar section is hidden.
 - **Agenda logic** (`lib/calendar.ts`, pure, unit tested): today's events from the API items, all-day first, ended ones dropped, next event marked.
 
@@ -326,7 +328,7 @@ Research on variable rewards: variable-ratio schedules drive the most consistent
 | D18 | Room always fits whole (meet + overscanned wall/floor); UI sizes in rem off a fluid root font size | User request (2026-10-14): resize naturally with any window or device ratio. Fitting keeps every object visible; overscan avoids letterbox bars; one fluid root size scales the whole UI with no per-component breakpoints. | Cover-crop (calendar and shelf cut off on narrow windows); per-breakpoint layouts. |
 | D19 | Desks drawn 2D with depth: shared trapezoid tabletop, front/side faces in paper tones, back legs | User request (2026-10-14): the desk looked flat. One shared tabletop keeps every theme desk aligned with the desk-object slots. | A true 3D render; per-desk perspective. |
 | D21 | Google Calendar through Google sign-in (OAuth code flow in a popup + refresh token), read-only, all calendars she has checked in Google Calendar | User choice (2026-10-14): the sign-in most services use, connect once like an MCP connector. A refresh token keeps it connected all day without another click; the OAuth app is published "In production" so tokens don't lapse after 7 days (Testing mode). | Token-only client (1 h tokens, a click to renew); secret iCal address (paste a URL). |
-| D22 | Naver Calendar planned as a second source (§7.6) | User request (2026-10-14). | — |
+| D22 | Naver Calendar via CalDAV with her Naver id + app password, through one stateless route | User request (2026-10-14). Naver offers no OAuth read API for Calendar; CalDAV with an app password is how iPhone/Windows calendar apps connect. The app password can be revoked in Naver anytime and is never stored server-side. | Naver Login (can't read events); iCal subscription (no documented secret URL). |
 | D20 | To-do board on the calendar (paper board when empty); 인장: 1 per day for finishing 5 to-dos; spent 5 at a time on self-chosen rewards | User request (2026-10-14). A daily cap and a 5-to-do threshold stop farming by checking trivial items; rewards she writes herself keep it personal and outside the piece economy. | Bonus pieces for to-dos (would mix study and chores in one currency). |
 
 Taste call to revisit after a week of real use: if themes still go too fast, raise recipes rather than shrinking drops (bigger drops are the fun part).
@@ -390,11 +392,12 @@ Two ways to get the data; pick one before building (Q7.2):
 
 Sources: [Use the token model](https://developers.google.com/identity/oauth2/web/guides/use-token-model), [Choose Google Calendar API scopes](https://developers.google.com/workspace/calendar/api/auth), [Sensitive scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification), [Manage App Audience](https://support.google.com/cloud/answer/15549945?hl=en).
 
-### 7.6 Step C — Naver Calendar (planned, not built)
+### 7.6 Step C — Naver Calendar — **built in v0.21** (US-13, D22, §3.2)
 Show Naver Calendar events on the board next to Google's, same lines and rules as US-12.
 - **What is known (2026-10-14, to re-verify before building):** Naver's public developer APIs (Naver Login) document adding events, not reading them. Reading works over **CalDAV** (`caldav.calendar.naver.com`) with her Naver id and an **app password** (issued after 2-step verification), the way iPhone/Windows calendar apps connect.
 - **Likely shape:** a second stateless route (`app/api/naver/caldav`) that sends a CalDAV `REPORT` for today to Naver with her credentials and returns parsed events (browsers can't call CalDAV cross-origin). The app password is stored only in her browser and sent per request, like the Google refresh token; never logged.
-- **Open questions:** Q7.5 does she keep events in Naver Calendar today (otherwise skip)? Q7.6 is entering an app password once acceptable, given there is no "로그인 버튼" flow for reading?
+- ~~**Open questions**~~ Answered (2026-10-14): the user asked to connect it; an app password entered once is the only read path (verified: the server only answers HTTP Basic, realm "Naver Calendar", and sends no CORS headers).
+- **Known limit:** recurring events rely on the server expanding them (`<C:expand>`); if Naver ignores it, only a series' first day shows. Check with her real calendar.
 - **Effort:** human ~2 days / CC ~2 hours, mostly CalDAV/iCal parsing tests.
 
 ### 7.5 How a step starts

@@ -1,0 +1,79 @@
+// Reads today's Naver Calendar events over CalDAV (SPEC §3.2, D22).
+// Stateless: the id and app password come with each request and are never stored or logged.
+// Only talks to caldav.calendar.naver.com (no open proxy).
+import { parseEvents } from "../../../../lib/ical";
+
+const ROOT = "https://caldav.calendar.naver.com/";
+const HOST = new URL(ROOT).host;
+
+class AuthError extends Error {}
+
+const tag = (name: string) => new RegExp(`<(?:[\\w-]+:)?${name}\\b[^>]*>([\\s\\S]*?)</(?:[\\w-]+:)?${name}>`, "g");
+const all = (xml: string, name: string) => [...xml.matchAll(tag(name))].map((m) => m[1]);
+const first = (xml: string, name: string) => all(xml, name)[0];
+const decode = (s: string) =>
+  s
+    .replace(/^<!\[CDATA\[([\s\S]*)\]\]>$/, "$1")
+    .replace(/&#13;|&#x0?d;/gi, "\r")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&amp;/g, "&");
+
+async function dav(url: string, method: string, auth: string, depth: string, body: string) {
+  const target = new URL(url, ROOT);
+  if (target.host !== HOST) throw new Error("BAD_HOST");
+  const res = await fetch(target, {
+    method,
+    headers: { Authorization: auth, Depth: depth, "Content-Type": "application/xml; charset=utf-8" },
+    body,
+  });
+  if (res.status === 401 || res.status === 403) throw new AuthError();
+  if (!res.ok) throw new Error(`DAV_${res.status}`);
+  return { xml: await res.text(), url: target.href };
+}
+
+const propfind = (props: string) =>
+  `<?xml version="1.0"?><d:propfind xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"><d:prop>${props}</d:prop></d:propfind>`;
+
+// "2026-10-14T00:00:00.000Z" → "20261014T000000Z"
+const davTime = (iso: string) => new Date(iso).toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+
+export async function POST(req: Request) {
+  const origin = req.headers.get("origin");
+  if (req.headers.get("x-requested-with") !== "XmlHttpRequest" || !origin || new URL(origin).host !== req.headers.get("host")) {
+    return Response.json({ error: "forbidden" }, { status: 403 });
+  }
+  const body = (await req.json().catch(() => null)) as Record<string, unknown> | null;
+  const { id, password, timeMin, timeMax } = body ?? {};
+  const ok = (v: unknown, max: number): v is string => typeof v === "string" && v.length > 0 && v.length <= max;
+  if (!ok(id, 100) || !ok(password, 200) || !ok(timeMin, 40) || !ok(timeMax, 40) || Number.isNaN(Date.parse(timeMin)) || Number.isNaN(Date.parse(timeMax))) {
+    return Response.json({ error: "bad_request" }, { status: 400 });
+  }
+  const auth = `Basic ${Buffer.from(`${id}:${password}`).toString("base64")}`;
+
+  try {
+    // RFC 4791/6764 discovery: principal → calendar home → calendar collections.
+    const root = await dav(ROOT, "PROPFIND", auth, "0", propfind("<d:current-user-principal/>"));
+    const principal = first(first(root.xml, "current-user-principal") ?? "", "href");
+    const p = principal ? await dav(decode(principal.trim()), "PROPFIND", auth, "0", propfind("<c:calendar-home-set/>")) : root;
+    const home = first(first(p.xml, "calendar-home-set") ?? "", "href");
+    const homeUrl = home ? new URL(decode(home.trim()), ROOT).href : p.url;
+    const list = await dav(homeUrl, "PROPFIND", auth, "1", propfind("<d:resourcetype/>"));
+    const calendars = all(list.xml, "response")
+      .filter((r) => /<(?:[\w-]+:)?calendar\s*\/>/.test(first(r, "resourcetype") ?? ""))
+      .map((r) => decode((first(r, "href") ?? "").trim()))
+      .filter(Boolean);
+
+    const start = davTime(timeMin);
+    const end = davTime(timeMax);
+    const query = `<?xml version="1.0"?><c:calendar-query xmlns:d="DAV:" xmlns:c="urn:ietf:params:xml:ns:caldav"><d:prop><c:calendar-data><c:expand start="${start}" end="${end}"/></c:calendar-data></d:prop><c:filter><c:comp-filter name="VCALENDAR"><c:comp-filter name="VEVENT"><c:time-range start="${start}" end="${end}"/></c:comp-filter></c:comp-filter></c:filter></c:calendar-query>`;
+    const reports = await Promise.all(calendars.map((href) => dav(href, "REPORT", auth, "1", query)));
+    const items = reports.flatMap((r) => all(r.xml, "calendar-data").flatMap((d) => parseEvents(decode(d.trim()))));
+    return Response.json({ items });
+  } catch (e) {
+    if (e instanceof AuthError) return Response.json({ error: "auth" }, { status: 401 });
+    return Response.json({ error: "caldav_failed" }, { status: 502 });
+  }
+}

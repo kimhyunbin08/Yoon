@@ -4,6 +4,7 @@ import { dayKey } from "../../lib/game";
 import { useStore } from "../../lib/store";
 import { eventLabel, nextEventId, todayAgenda } from "../../lib/calendar";
 import { useGoogle } from "../../lib/google";
+import { useNaver } from "../../lib/naver";
 import { boardLines } from "../../lib/todos";
 
 // Shared helpers for room item art (1440x900 stage coordinates).
@@ -44,9 +45,12 @@ const WEEKDAY_KO = ["일", "월", "화", "수", "목", "금", "토"];
 export function CalendarFace({ x, y, w, h, color = INK }: { x: number; y: number; w: number; h: number; color?: string }) {
   const d = useToday();
   const state = useStore((s) => s.state);
-  const items = useGoogle((g) => g.items);
-  const reconnect = useGoogle((g) => g.status === "reconnect");
-  const events = todayAgenda(items, d.getTime());
+  const gItems = useGoogle((g) => g.items);
+  const nItems = useNaver((n) => n.items);
+  const gLost = useGoogle((g) => g.status === "reconnect");
+  const nLost = useNaver((n) => n.status === "reconnect");
+  const reconnect = gLost || nLost;
+  const events = todayAgenda([...gItems, ...nItems], d.getTime());
   const evLines = reconnect ? ["캘린더 다시 연결"] : events.map(eventLabel);
   const evShown = Math.min(evLines.length, Math.max(2, 4 - state.todos.length));
   const { lines, more: moreTodos } = boardLines(state, 4 - evShown);
@@ -56,8 +60,16 @@ export function CalendarFace({ x, y, w, h, color = INK }: { x: number; y: number
   const head = h * 0.15;
   const size = h * 0.12;
   const row = h * 0.17;
-  const maxChars = Math.max(4, Math.floor((w - size * 2.4) / (size * 0.95)));
-  const fit = (t: string) => (t.length > maxChars ? `${t.slice(0, maxChars - 1)}…` : t);
+  // Truncate by estimated width: Hangul ≈ 0.95em, ASCII (digits, spaces, colons) ≈ 0.55em.
+  const fit = (t: string, room: number, fs: number) => {
+    const cw = (ch: string) => (ch.charCodeAt(0) < 128 ? 0.55 : 0.95) * fs;
+    let used = 0;
+    for (let i = 0; i < t.length; i++) {
+      used += cw(t[i]);
+      if (used > room) return `${t.slice(0, Math.max(1, i - 1))}…`;
+    }
+    return t;
+  };
   return (
     <g style={{ fill: color }}>
       <text x={x + 6} y={y + head} fontSize={size * 1.05} fontWeight="700">
@@ -76,7 +88,7 @@ export function CalendarFace({ x, y, w, h, color = INK }: { x: number; y: number
               <rect x={x + 6} y={cy - size * 0.75} width={size * 0.8} height={size * 0.8} rx="1.5" fill="none" stroke={color} strokeWidth="0.9" />
               {t.done && <path d={`M${x + 7.2} ${cy - size * 0.35} l${size * 0.25} ${size * 0.25} l${size * 0.4} ${-size * 0.55}`} fill="none" stroke={color} strokeWidth="1" />}
               <text x={x + 6 + size * 1.3} y={cy} fontSize={size} textDecoration={t.done ? "line-through" : undefined}>
-                {fit(t.text)}
+                {fit(t.text, w - 12 - size * 1.3, size)}
               </text>
             </g>
           );
@@ -91,7 +103,7 @@ export function CalendarFace({ x, y, w, h, color = INK }: { x: number; y: number
           opacity={reconnect ? 0.55 : 0.85}
           textDecoration={!reconnect && events[i].id === next ? "underline" : undefined}
         >
-          {fit(label)}
+          {fit(label, w - 12, size * 0.95)}
         </text>
       ))}
       {more > 0 && (
