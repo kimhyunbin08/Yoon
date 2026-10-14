@@ -2,7 +2,7 @@
 import { useId, type ComponentType } from "react";
 import type { ItemId } from "../../../content/catalog";
 import type { Glow } from "../items";
-import { CalendarFace, INK, WallPattern, v } from "../shared";
+import { INK, WallPattern, v } from "../shared";
 
 // 별밤 도서관 (starry-library): stars, jars, and old wood. Pre-v5 items (curtains, garland, candle & books, moon clock) live in items.tsx.
 
@@ -19,26 +19,6 @@ function StarWallpaper() {
         <circle cx="24" cy="70" r="1.6" />
       </g>
     </WallPattern>
-  );
-}
-
-function MoonCalendar() {
-  // A row of moon phases above the date: new → full, drawn as outline + lit half.
-  return (
-    <g>
-      <rect x="168" y="58" width="164" height="120" rx="8" fill={v("white")} />
-      {[0, 1, 2, 3, 4].map((i) => {
-        const cx = 192 + i * 29;
-        const lit = [0, 0.35, 0.5, 0.75, 1][i];
-        return (
-          <g key={i}>
-            <circle cx={cx} cy="76" r="9" fill={v("wall-d")} />
-            {lit > 0 && <ellipse cx={cx + 9 * (1 - lit)} cy="76" rx={9 * lit} ry="9" fill={v("white")} />}
-          </g>
-        );
-      })}
-      <CalendarFace x={168} y={92} w={164} h={86} />
-    </g>
   );
 }
 
@@ -80,34 +60,6 @@ function LibraryDesk() {
   );
 }
 
-function Hourglass() {
-  return (
-    <g>
-      <rect x="676" y="512" width="64" height="10" rx="3" fill={v("wood")} />
-      <rect x="676" y="590" width="64" height="10" rx="3" fill={v("wood")} />
-      <path d="M684 522 V590 M732 522 V590" stroke={INK} strokeWidth="2.5" />
-      <path d="M690 522 H726 Q726 548 710 556 Q726 564 726 590 H690 Q690 564 706 556 Q690 548 690 522 Z" fill={v("white")} />
-      <path d="M696 584 Q708 568 720 584 Z" fill={v("wall-d")} />
-      <path d="M708 556 V580" stroke={INK} strokeWidth="1" />
-    </g>
-  );
-}
-
-function TallCactus() {
-  return (
-    <g>
-      <path d="M108 790 V560 Q108 534 124 534 Q140 534 140 560 V790 Z" fill={v("white")} />
-      <path d="M108 680 H90 Q78 680 78 666 V620 Q78 608 88 608 Q98 608 98 620 V662 H108 Z" fill={v("white")} />
-      <path d="M140 640 H158 Q170 640 170 626 V590 Q170 578 160 578 Q150 578 150 590 V622 H140 Z" fill={v("white")} />
-      {[118, 130].map((x) => (
-        <path key={x} d={`M${x} 548 V786`} stroke={INK} strokeWidth="1" opacity="0.4" />
-      ))}
-      <path d="M78 790h88l-10 92h-68Z" fill={v("cream")} />
-      <rect x="72" y="782" width="100" height="16" rx="8" fill={v("white")} />
-    </g>
-  );
-}
-
 function FloorBooks() {
   const stack: [number, number, number][] = [[1236, 868, 160], [1246, 846, 140], [1240, 826, 150], [1256, 808, 118]];
   return (
@@ -125,11 +77,8 @@ function FloorBooks() {
 
 export const STARRY_ART: Partial<Record<ItemId, ComponentType>> = {
   "star-wallpaper": StarWallpaper,
-  "moon-calendar": MoonCalendar,
   "star-jars": StarJars,
   "library-desk": LibraryDesk,
-  hourglass: Hourglass,
-  "tall-cactus": TallCactus,
   "floor-books": FloorBooks,
 };
 

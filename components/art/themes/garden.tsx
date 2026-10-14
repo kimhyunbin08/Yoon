@@ -1,25 +1,10 @@
 "use client";
-import { useId, type ComponentType } from "react";
+import type { ComponentType } from "react";
 import type { ItemId } from "../../../content/catalog";
 import type { Glow } from "../items";
-import { CalendarFace, INK, Tube, WallPattern, v } from "../shared";
+import { CalendarFace, INK, Tube, v } from "../shared";
 
 // 새벽 정원 (dawn-garden): leaves, paper, and watering. Pre-v5 items (curtains, plant shelf, rug) live in items.tsx.
-
-function GardenWallpaper() {
-  const id = `leaf${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
-  return (
-    <WallPattern id={id} size={96}>
-      <g stroke={INK} strokeWidth="1.4" fill="none" opacity="0.22" strokeLinecap="round">
-        <path d="M24 78 Q30 58 24 36" />
-        <path d="M25 58 Q38 52 40 38 Q28 42 25 58 Z" />
-        <path d="M24 66 Q11 60 8 46 Q21 50 24 66 Z" />
-        <path d="M74 30 Q78 18 74 6" />
-        <path d="M75 20 Q84 16 86 8 Q78 10 75 20 Z" />
-      </g>
-    </WallPattern>
-  );
-}
 
 function PaperLantern() {
   return (
@@ -49,36 +34,6 @@ function FlowerCalendar() {
         </g>
       ))}
       <CalendarFace x={175} y={86} w={150} h={90} />
-    </g>
-  );
-}
-
-function LeafFrame() {
-  return (
-    <g>
-      <path d="M1160 196 L1200 160 L1240 196" stroke={INK} strokeWidth="1.6" fill="none" />
-      <rect x="1100" y="190" width="200" height="250" rx="6" fill={v("white")} />
-      <rect x="1122" y="212" width="156" height="206" fill={v("cream")} />
-      <path d="M1200 390 Q1196 300 1200 238" stroke={INK} strokeWidth="1.6" fill="none" />
-      {[0, 1, 2, 3].map((i) => (
-        <g key={i}>
-          <path d={`M1200 ${370 - i * 34} Q${1166 - i * 2} ${360 - i * 34} ${1160 + i * 4} ${334 - i * 34} Q${1186} ${346 - i * 34} 1200 ${370 - i * 34} Z`} fill={v("white")} />
-          <path d={`M1200 ${360 - i * 34} Q${1234 + i * 2} ${350 - i * 34} ${1240 - i * 4} ${324 - i * 34} Q${1214} ${336 - i * 34} 1200 ${360 - i * 34} Z`} fill={v("white")} />
-        </g>
-      ))}
-    </g>
-  );
-}
-
-function TrestleDesk() {
-  return (
-    <g>
-      {/* A-frame trestles */}
-      <path d="M262 628 L232 900 H254 L286 640 L318 900 H340 L310 628 Z" fill={v("desk-d")} />
-      <path d="M1130 628 L1100 900 H1122 L1154 640 L1186 900 H1208 L1178 628 Z" fill={v("desk-d")} />
-      <rect x="300" y="760" width="840" height="14" rx="4" fill={v("desk-d")} />
-      <rect x="200" y="600" width="1040" height="28" rx="6" fill={v("desk")} />
-      <path d="M240 614 H1200" stroke={INK} strokeWidth="1" opacity="0.4" />
     </g>
   );
 }
@@ -147,11 +102,8 @@ function FernPot() {
 }
 
 export const GARDEN_ART: Partial<Record<ItemId, ComponentType>> = {
-  "garden-wallpaper": GardenWallpaper,
   "paper-lantern": PaperLantern,
   "flower-calendar": FlowerCalendar,
-  "leaf-frame": LeafFrame,
-  "trestle-desk": TrestleDesk,
   "watering-can": WateringCan,
   "flower-notebook": FlowerNotebook,
   "fern-pot": FernPot,

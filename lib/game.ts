@@ -25,7 +25,7 @@ const V1_BLOCK_MS = 30 * 60_000;
 export type Segment = { start: number; end: number | null };
 export type Timer = { segments: Segment[]; blocksAwarded: number; piecesEarned: number }; // piecesEarned: this session
 export type State = {
-  version: 5;
+  version: 6;
   timer: Timer;
   carryMs: number; // focused time left over from previous sessions, < BLOCK_MS
   daily: Record<string, number>; // local YYYY-MM-DD -> focused ms (closed segments only)
@@ -40,7 +40,7 @@ type Result = { state: State; drops: Drop[] };
 
 export function initialState(): State {
   return {
-    version: 5,
+    version: 6,
     timer: { segments: [], blocksAwarded: 0, piecesEarned: 0 },
     carryMs: 0,
     daily: {},
@@ -275,15 +275,19 @@ function migrateRoomV5(old: Record<string, unknown>): State["room"] {
 
 /** Validates stored or imported state and upgrades older versions. Throws INVALID_STATE. */
 export function migrate(raw: unknown): State {
-  if (!isObj(raw) || ![1, 2, 3, 4, 5].includes(raw.version as number)) throw new Error("INVALID_STATE");
+  if (!isObj(raw) || ![1, 2, 3, 4, 5, 6].includes(raw.version as number)) throw new Error("INVALID_STATE");
   const base = initialState();
   const timer = { ...base.timer, ...(isObj(raw.timer) ? raw.timer : {}) } as Timer;
   // v1 counted 30-minute blocks; v2 counts 5-minute rolls.
   if (raw.version === 1 && typeof timer.blocksAwarded === "number") timer.blocksAwarded *= V1_BLOCK_MS / BLOCK_MS;
   const { rollsSinceDrop: _drop, ...rest } = raw; // v2-only field
   void _drop;
-  const room = (raw.version as number) < 5 && isObj(raw.room) ? migrateRoomV5(raw.room) : raw.room;
-  const s = { ...base, ...rest, room, version: 5, timer } as State;
+  const moved = (raw.version as number) < 5 && isObj(raw.room) ? migrateRoomV5(raw.room) : raw.room;
+  // v6: drop placed items that no longer exist (themes were trimmed in v0.13) or sit in the wrong slot.
+  const room = isObj(moved)
+    ? (Object.fromEntries(Object.entries(moved).filter(([slot, id]) => ITEM_BY_ID[id as ItemId]?.slot === slot)) as State["room"])
+    : moved;
+  const s = { ...base, ...rest, room, version: 6, timer } as State;
   const ok =
     Array.isArray(s.timer.segments) &&
     s.timer.segments.every((g) => isObj(g) && typeof g.start === "number" && (g.end === null || typeof g.end === "number")) &&

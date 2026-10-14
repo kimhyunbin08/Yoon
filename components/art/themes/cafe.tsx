@@ -1,22 +1,10 @@
 "use client";
-import { useId, type ComponentType } from "react";
+import type { ComponentType } from "react";
 import type { ItemId } from "../../../content/catalog";
 import type { Glow } from "../items";
-import { CalendarFace, INK, Tube, WallPattern, v } from "../shared";
+import { CalendarFace, INK, Tube, v } from "../shared";
 
 // 햇살 카페 (sunny-cafe): stripes, brass, and coffee. Pre-v5 items (latte & cake, pendant, menu board) live in items.tsx.
-
-function CafeWallpaper() {
-  const id = `stripe${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
-  return (
-    <WallPattern id={id} size={64}>
-      <g stroke={INK} strokeWidth="1.2" opacity="0.2">
-        <path d="M8 0 V64" />
-        <path d="M18 0 V64" />
-      </g>
-    </WallPattern>
-  );
-}
 
 function CafeCurtain() {
   // A café half-curtain on a rod across the middle of the glass.
@@ -83,65 +71,28 @@ function CafeTable() {
   );
 }
 
-function MokaPot() {
+/** Banker's lamp: brass stem, half-cylinder shade, pull chain. */
+function BankerLamp() {
   return (
     <g>
-      <path d="M676 600 L666 556 H730 L720 600 Z" fill={v("white")} />
-      <rect x="664" y="550" width="68" height="8" rx="2" fill={v("white")} />
-      <path d="M672 550 L680 510 H716 L724 550 Z" fill={v("white")} />
-      <path d="M680 510 L698 492 L716 510 Z" fill={v("white")} />
-      <circle cx="698" cy="488" r="5" fill={v("white")} />
-      <Tube d="M724 520 Q754 524 744 556" width={6} />
-      <path d="M672 520 L654 512" stroke={INK} strokeWidth="2" fill="none" />
-      <path d="M772 600 Q770 574 772 572 H812 Q814 574 812 600 Z" fill={v("white")} />
-      <Tube d="M812 580 Q826 582 812 594" width={4} />
-      <ellipse cx="792" cy="600" rx="30" ry="5" fill={v("white")} />
-    </g>
-  );
-}
-
-function OliveTree() {
-  const clusters: [number, number][] = [[96, 560], [146, 540], [120, 520], [76, 610], [166, 600], [122, 590]];
-  return (
-    <g>
-      <path d="M122 782 Q116 700 124 640 Q128 600 120 560" stroke={INK} strokeWidth="5" fill="none" strokeLinecap="round" />
-      <path d="M122 782 Q116 700 124 640 Q128 600 120 560" stroke={v("white")} strokeWidth="2" fill="none" strokeLinecap="round" />
-      {clusters.flatMap(([x, y], i) =>
-        [-40, 0, 40, 80].map((a, k) => (
-          <ellipse key={`${i}-${k}`} cx={x + Math.cos((a * Math.PI) / 180) * 16} cy={y + Math.sin((a * Math.PI) / 180) * 10} rx="12" ry="4.5" transform={`rotate(${a + i * 15} ${x} ${y})`} fill={v("white")} />
-        )),
-      )}
-      <path d="M82 790h80l-8 92h-64Z" fill={v("white")} />
-      <rect x="76" y="782" width="92" height="14" rx="7" fill={v("cream")} />
-    </g>
-  );
-}
-
-function CheckerRug() {
-  const id = `check${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
-  return (
-    <g>
-      <defs>
-        <pattern id={id} width="48" height="24" patternUnits="userSpaceOnUse">
-          <rect className="no-line" width="24" height="12" fill={v("wall-d")} />
-          <rect className="no-line" x="24" y="12" width="24" height="12" fill={v("wall-d")} />
-        </pattern>
-      </defs>
-      <path d="M330 790 H1110 L1170 880 H270 Z" fill={v("white")} />
-      <path className="no-line" d="M346 798 H1094 L1144 872 H296 Z" fill={`url(#${id})`} />
+      <rect x="1056" y="586" width="98" height="14" rx="6" fill={v("wood")} />
+      <Tube d="M1105 588 V530" width={6} />
+      <path d="M1036 532 Q1036 498 1105 496 Q1174 498 1174 532 Z" fill={v("white")} />
+      <rect x="1034" y="530" width="142" height="8" rx="4" fill={v("wood")} />
+      <path d="M1150 538 V566" stroke={INK} strokeWidth="1.2" strokeDasharray="2 3" />
+      <circle cx="1150" cy="569" r="3" fill={v("white")} />
     </g>
   );
 }
 
 export const CAFE_ART: Partial<Record<ItemId, ComponentType>> = {
-  "cafe-wallpaper": CafeWallpaper,
+  "banker-lamp": BankerLamp,
   "cafe-curtain": CafeCurtain,
   "tearoff-calendar": TearoffCalendar,
   "coffee-jars": CoffeeJars,
   "cafe-table": CafeTable,
-  "moka-pot": MokaPot,
-  "olive-tree": OliveTree,
-  "checker-rug": CheckerRug,
 };
 
-export const CAFE_GLOWS: Partial<Record<string, Glow[]>> = {};
+export const CAFE_GLOWS: Partial<Record<string, Glow[]>> = {
+  "banker-lamp": [{ cx: 1105, cy: 560, r: 260 }],
+};

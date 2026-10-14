@@ -14,8 +14,9 @@ export const SLOT_RECTS: Record<Slot, [number, number, number, number]> = {
   windowCover: [466, 74, 508, 456],
   windowView: [522, 118, 396, 364],
   lighting: [380, 0, 700, 100],
-  calendar: [300, 92, 180, 145],
-  wallDecor: [1070, 150, 270, 300],
+  deskLamp: [1030, 400, 170, 205],
+  calendar: [1050, 160, 310, 270],
+  wallDecor: [300, 86, 180, 160],
   shelfObject: [90, 190, 320, 170],
   desk: [190, 590, 1060, 310],
   deskObject1: [280, 440, 280, 165],
@@ -30,8 +31,20 @@ function area(s: Slot) {
   return w * h;
 }
 
-// Light shaft from the window glass, falling diagonally down-right to the floor.
-const WINDOW_LIGHT = "M522 118 L918 118 L1348 900 L752 900 L522 482 Z";
+// Calendar and wall-decor art share one drawing size and are scaled into their spots (SPEC §4.3).
+// Calendars are drawn around (250, 118); wall decor around (1205, 300).
+type Placement = { from: [number, number]; to: [number, number]; scale: number; className: string };
+const PLACE: Partial<Record<Slot, Placement>> = {
+  calendar: { from: [250, 118], to: [1205, 296], scale: 1.7, className: "scale-up" },
+  wallDecor: { from: [1205, 300], to: [390, 166], scale: 0.48, className: "scale-down" },
+};
+const placeTransform = ({ from, to, scale }: Placement) => `translate(${to[0]} ${to[1]}) scale(${scale}) translate(${-from[0]} ${-from[1]})`;
+const placeGlow = (g: Glow, { from, to, scale }: Placement): Glow => ({
+  ...g,
+  cx: to[0] + (g.cx - from[0]) * scale,
+  cy: to[1] + (g.cy - from[1]) * scale,
+  r: g.r * scale,
+});
 
 type Props = {
   room: Partial<Record<Slot, ItemId>>;
@@ -50,11 +63,26 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
   };
   const viewItem = item("windowView");
   const view: WindowView = (viewItem && (ITEM_BY_ID[viewItem] as { view?: WindowView }).view) || "hills";
-  const glows: Glow[] = [{ cx: 1118, cy: 520, r: 300 }, ...(Object.keys(SLOT_RECTS) as Slot[]).flatMap((s) => ITEM_GLOWS[item(s) ?? ""] ?? [])];
+  const glows: Glow[] = [
+    ...(item("deskLamp") ? [] : [{ cx: 1118, cy: 520, r: 300 }]), // base lamp
+    ...(Object.keys(SLOT_RECTS) as Slot[]).flatMap((s) => {
+      const place = PLACE[s];
+      const own = ITEM_GLOWS[item(s) ?? ""] ?? [];
+      return place ? own.map((g) => placeGlow(g, place)) : own;
+    }),
+  ];
   const Art = (slot: Slot) => {
     const id = item(slot);
     const C = id ? ITEM_ART[id] : null;
-    return C ? <C /> : null;
+    if (!C) return null;
+    const place = PLACE[slot];
+    return place ? (
+      <g className={place.className} transform={placeTransform(place)}>
+        <C />
+      </g>
+    ) : (
+      <C />
+    );
   };
   const pencil = `url(#pencil${uid})`;
 
@@ -88,11 +116,6 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
           <feColorMatrix in="right" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" result="cyan" />
           <feBlend in="red" in2="cyan" mode="screen" />
         </filter>
-        {/* window light fades from the glass to the floor */}
-        <linearGradient id={`light${uid}`} gradientUnits="userSpaceOnUse" x1="720" y1="118" x2="1050" y2="900">
-          <stop offset="0" style={{ stopColor: "var(--light)", stopOpacity: 1 }} />
-          <stop offset="1" style={{ stopColor: "var(--light)", stopOpacity: 0.45 }} />
-        </linearGradient>
         {/* colored-pencil lines: a slow wobble plus grain punched into the strokes */}
         <filter id={`pencil${uid}`} filterUnits="userSpaceOnUse" x="0" y="0" width="1440" height="900">
           <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="4" result="warp" />
@@ -104,15 +127,6 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
         <clipPath id={`glass${uid}`}>
           <rect x="522" y="118" width="396" height="364" rx="12" />
         </clipPath>
-        <mask id={`shade${uid}`}>
-          <rect width="1440" height="900" fill="white" />
-          <path d={WINDOW_LIGHT} fill="black" />
-        </mask>
-        {/* window light paints the room, not the glass (the sky already carries its color) */}
-        <mask id={`light-mask${uid}`}>
-          <path d={WINDOW_LIGHT} fill="white" />
-          <rect x="522" y="118" width="396" height="364" rx="12" fill="black" />
-        </mask>
         <mask id={`moon${uid}`}>
           <circle cx="620" cy="190" r="30" fill="white" />
           <circle cx="634" cy="180" r="27" fill="black" />
@@ -152,8 +166,7 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
         <rect x="522" y="295" width="396" height="10" fill={v("white")} />
         <rect x="480" y="496" width="480" height="22" rx="10" fill={v("cream")} />
         {Art("windowCover")}
-        {/* calendars are drawn around x=250; shifted right so the window-time chip never covers them */}
-        <g transform="translate(140 52)">{Art("calendar")}</g>
+        {Art("calendar")}
         {Art("wallDecor")}
         {Art("lighting")}
 
@@ -166,22 +179,11 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
 
         {Art("desk") ?? <BaseDesk />}
 
-        {/* desk lamp: the room's main light, not a slot */}
-        <ellipse cx="1100" cy="597" rx="46" ry="8" fill={v("mint-d")} />
-        <path d="M1100 596 L1072 506 L1118 450" stroke="var(--line-art)" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-        <path d="M1100 596 L1072 506 L1118 450" stroke={v("white")} strokeWidth="7.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-        <path d="M1092 414h52l26 58h-104Z" fill={v("mint")} />
-        <ellipse cx="1118" cy="472" rx="20" ry="6" fill={v("yellow")} />
+        {Art("deskLamp") ?? <BaseLamp />}
 
         {Art("deskObject1")}
         {Art("deskObject2") ?? <BaseDeskObjects />}
       </g>
-
-      {/* light and shadow carry all the color (SPEC §4.3) */}
-      <rect width="1440" height="900" mask={`url(#shade${uid})`} style={{ fill: "var(--shade)", opacity: "var(--shade-opacity)", mixBlendMode: "multiply" }} />
-      {/* mask each layer, not a group: a masked group is isolated and would stop the blend modes reaching the room */}
-      <path d={WINDOW_LIGHT} mask={`url(#light-mask${uid})`} fill={`url(#light${uid})`} style={{ opacity: "var(--light-wash)", mixBlendMode: "multiply" }} />
-      <path d={WINDOW_LIGHT} mask={`url(#light-mask${uid})`} fill={`url(#light${uid})`} style={{ opacity: 0.85, mixBlendMode: "overlay" }} />
 
       <rect width="1440" height="900" style={{ fill: "var(--tint)", opacity: "var(--tint-opacity)", mixBlendMode: "multiply" }} />
       {glows.map((g, i) =>
@@ -244,6 +246,19 @@ function BaseDesk() {
       <rect x="226" y="624" width="988" height="54" rx="6" fill={v("desk-d")} />
       <rect x="640" y="646" width="160" height="10" rx="5" fill={v("desk")} />
       <rect x="200" y="600" width="1040" height="28" rx="10" fill={v("desk")} />
+    </g>
+  );
+}
+
+/** Swing-arm desk lamp, shown when the desk-lamp slot is empty: the room's main light. */
+function BaseLamp() {
+  return (
+    <g>
+      <ellipse cx="1100" cy="597" rx="46" ry="8" fill={v("mint-d")} />
+      <path d="M1100 596 L1072 506 L1118 450" stroke="var(--line-art)" strokeWidth="12" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path d="M1100 596 L1072 506 L1118 450" stroke={v("white")} strokeWidth="7.6" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+      <path d="M1092 414h52l26 58h-104Z" fill={v("mint")} />
+      <ellipse cx="1118" cy="472" rx="20" ry="6" fill={v("yellow")} />
     </g>
   );
 }
