@@ -2,6 +2,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { dayKey } from "../../lib/game";
 import { useStore } from "../../lib/store";
+import { eventLabel, nextEventId, todayAgenda } from "../../lib/calendar";
+import { useGoogle } from "../../lib/google";
 import { boardLines } from "../../lib/todos";
 
 // Shared helpers for room item art (1440x900 stage coordinates).
@@ -35,13 +37,21 @@ const WEEKDAY_KO = ["일", "월", "화", "수", "목", "금", "토"];
 
 /**
  * The wall board inside every calendar (SPEC US-10): a one-line date header, up to 4 to-dos
- * (open first, then today's done ones struck through), "+N" for the rest, and today's 인장 stamp.
+ * (open first, then today's done ones struck through), today's calendar events under them (US-12; at least 2 lines
+ * when there are any, next one underlined), "+N" for the rest, and today's 인장 stamp.
  * Text is never outlined by the line-art rule.
  */
 export function CalendarFace({ x, y, w, h, color = INK }: { x: number; y: number; w: number; h: number; color?: string }) {
   const d = useToday();
   const state = useStore((s) => s.state);
-  const { lines, more } = boardLines(state);
+  const items = useGoogle((g) => g.items);
+  const reconnect = useGoogle((g) => g.status === "reconnect");
+  const events = todayAgenda(items, d.getTime());
+  const evLines = reconnect ? ["캘린더 다시 연결"] : events.map(eventLabel);
+  const evShown = Math.min(evLines.length, Math.max(2, 4 - state.todos.length));
+  const { lines, more: moreTodos } = boardLines(state, 4 - evShown);
+  const more = moreTodos + evLines.length - evShown;
+  const next = reconnect ? null : nextEventId(events);
   const sealed = state.sealAwardedOn === dayKey(d.getTime());
   const head = h * 0.15;
   const size = h * 0.12;
@@ -54,7 +64,7 @@ export function CalendarFace({ x, y, w, h, color = INK }: { x: number; y: number
         {d.getMonth() + 1}월 {d.getDate()}일 {WEEKDAY_KO[d.getDay()]}요일
       </text>
       <path d={`M${x + 6} ${y + head + 4} H${x + w - 6}`} stroke={color} strokeWidth="0.8" opacity="0.5" />
-      {lines.length === 0 ? (
+      {lines.length === 0 && evShown === 0 ? (
         <text x={x + 6} y={y + head + row * 1.4} fontSize={size * 0.9} opacity="0.55">
           할 일을 적어 보세요
         </text>
@@ -72,6 +82,18 @@ export function CalendarFace({ x, y, w, h, color = INK }: { x: number; y: number
           );
         })
       )}
+      {evLines.slice(0, evShown).map((label, i) => (
+        <text
+          key={i}
+          x={x + 6}
+          y={y + head + row * (lines.length + i + 1.2)}
+          fontSize={size * 0.95}
+          opacity={reconnect ? 0.55 : 0.85}
+          textDecoration={!reconnect && events[i].id === next ? "underline" : undefined}
+        >
+          {fit(label)}
+        </text>
+      ))}
       {more > 0 && (
         <text x={x + w - 6} y={y + h - 3} fontSize={size * 0.85} textAnchor="end" opacity="0.6">
           +{more}

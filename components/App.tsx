@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { PIECES, PIECE_BY_ID, THEME_BY_ID, type ItemId, type Slot, type ThemeId } from "../content/catalog";
 import * as game from "../lib/game";
+import { initGoogle } from "../lib/google";
 import { store, useStore } from "../lib/store";
 import { clearDone } from "../lib/todos";
 import { Controls, Menu, TimerPill, Toasts, WindowChip, fmtDuration, useNow, type PanelId, type Toast } from "./Hud";
@@ -52,6 +53,7 @@ export default function App() {
   // load once
   useEffect(() => {
     store.init();
+    initGoogle();
   }, []);
 
   // award completed blocks on open and every 10 s

@@ -31,6 +31,7 @@ import {
   removeTodo,
   toggleTodo,
 } from "../lib/todos";
+import { connectGoogle, disconnectGoogle, googleEnabled, refreshAgenda, useGoogle } from "../lib/google";
 import { exportBackup, readBackup, useStore } from "../lib/store";
 import { PieceIcon } from "./art/pieces";
 import { Icon, fmtDuration } from "./Hud";
@@ -443,6 +444,8 @@ export function TodoPanel({
       )}
       <p className="mb-6 text-xs text-muted">Space 체크 · 더블클릭 고치기 · Delete 지우기 · Alt+↑↓ 순서 · 끝낸 일은 자정에 정리돼요</p>
 
+      {googleEnabled && <CalendarSection />}
+
       <section className="mb-6 rounded-2xl bg-surface-solid p-4" aria-label="인장">
         <div className="flex items-baseline justify-between">
           <h3 className="font-semibold">인장</h3>
@@ -513,5 +516,55 @@ export function TodoPanel({
         )}
       </section>
     </Drawer>
+  );
+}
+
+/** 캘린더 (SPEC US-12): connect once, then refresh or disconnect. Hidden when no Google client id is configured. */
+function CalendarSection() {
+  const status = useGoogle((g) => g.status);
+  const fetchedAt = useGoogle((g) => g.fetchedAt);
+  const busy = useGoogle((g) => g.busy);
+  const [error, setError] = useState("");
+  const btn = "h-9 rounded-full px-4 text-sm font-semibold";
+  const connect = () => {
+    setError("");
+    connectGoogle().catch((e: Error) =>
+      setError(e.message === "popup_closed" ? "" : e.message === "NO_REFRESH_TOKEN" ? "한 번만 더 눌러 주세요." : "연결하지 못했어요. 잠시 후 다시 해 주세요."),
+    );
+  };
+  const time = (t: number) => new Date(t).toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", hour12: false });
+  return (
+    <section className="mb-6 rounded-2xl bg-surface-solid p-4" aria-label="캘린더">
+      <h3 className="mb-1 font-semibold">캘린더</h3>
+      {status === "off" ? (
+        <>
+          <p className="mb-3 text-sm text-muted">오늘 일정을 벽 보드에 보여줘요. 읽기만 하고 고치지 않아요.</p>
+          <button type="button" onClick={connect} className={`${btn} bg-primary`}>
+            Google 캘린더 연결
+          </button>
+        </>
+      ) : (
+        <>
+          <p className="mb-3 text-sm text-muted">
+            {status === "reconnect" ? "연결이 끊겼어요. 다시 연결해 주세요." : fetchedAt ? `Google 캘린더 · 마지막 업데이트 ${time(fetchedAt)}` : "Google 캘린더 · 불러오는 중"}
+          </p>
+          <div className="flex gap-2">
+            {status === "reconnect" ? (
+              <button type="button" onClick={connect} className={`${btn} bg-primary`}>
+                다시 연결
+              </button>
+            ) : (
+              <button type="button" disabled={busy} onClick={() => refreshAgenda()} className={`${btn} bg-line disabled:opacity-50`}>
+                새로고침
+              </button>
+            )}
+            <button type="button" onClick={() => disconnectGoogle()} className={`${btn} bg-line`}>
+              연결 끊기
+            </button>
+          </div>
+        </>
+      )}
+      {error && <p className="mt-2 text-sm text-muted">{error}</p>}
+    </section>
   );
 }

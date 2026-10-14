@@ -1,7 +1,7 @@
 # StillRoom — Product Spec
 
 Source: user interview (2026-10).
-Status: v0.19 (implemented; §7 step B planned). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
+Status: v0.20 (implemented; Naver Calendar planned, §7.6). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
 Sections: 1 Ideation · 2 PRD · 3 TRD · 4 Design Spec · 5 Open Questions · 6 Market Research & Decisions · 7 Next Development Steps (planned, not built). Agent instructions live in `AGENTS.md`.
 
 Platform decision: **laptop only** (desktop browser, landscape). No phone, no tablet, no sync.
@@ -27,7 +27,7 @@ One user: a student who wants a cozy room on screen while studying. What the int
 1. **The room is the product.** It must look good full screen for hours. Every other screen is secondary.
 2. **Reward time, never punish it.** Leaving it on is the intended use. No caps, no idle penalties, no streak loss.
 3. **Calm, not gamey.** No rankings, no notifications nagging, no loud reward effects.
-4. **Single user, zero friction.** No sign-up. Open it and it works.
+4. **Single user, zero friction.** No sign-up. Open it and it works. Connecting a calendar is optional; the room never asks for it.
 
 ### 1.4 Core loop
 ```
@@ -48,7 +48,7 @@ Diary (일기장) inside the room, ambient sounds (rain, café, pencil), more th
 The user keeps it as her default study backdrop for 2 weeks straight and asks for more themes. That is the only success criterion.
 
 ### 2.2 Non-goals for MVP
-Accounts, sync, mobile/tablet layouts, social, rankings, payments, native apps, anti-cheat, free-form drag placement, diary.
+Accounts of our own (the optional Google sign-in only reads her calendar, D21), sync, mobile/tablet layouts, social, rankings, payments, native apps, anti-cheat, free-form drag placement, diary.
 
 ### 2.3 User stories (MVP)
 | ID | She wants to… | Acceptance criteria |
@@ -64,6 +64,7 @@ Accounts, sync, mobile/tablet layouts, social, rankings, payments, native apps, 
 | US-9 | not lose her room | Export / import a backup JSON file. Reminder after every 3rd unlocked theme. |
 | US-10 | keep today's to-dos on the wall | The calendar on the right wall is a paper board showing the date and up to 4 to-dos (open first, then today's done ones struck through, "+N" for the rest). An empty calendar slot shows a plain paper board. Click the board or press `5` to open the 할 일 drawer: Enter adds, click/Space checks, double-click edits, Delete removes, Alt+↑/↓ reorders. Done items clear at local midnight. Max 50 items, 80 chars each. No due times or alarms. |
 | US-11 | reward herself | Finishing **5 to-dos in a day earns 1 인장** (max 1 per day; unchecking below 5 the same day takes it back unless it was already spent). She writes her own rewards in the drawer ("나에게 주는 상", max 10). With **5 인장** she can claim one; it costs 5 and is logged with the date. Today's 인장 shows as a pencil stamp on the board. |
+| US-12 | see today's schedule on the wall | In the 할 일 drawer, "Google 캘린더 연결" opens Google's sign-in popup once; after that it stays connected (no re-login) until she presses "연결 끊기" or revokes access in her Google account. The board shows today's remaining events under the to-dos ("14:00 영어 스터디", all-day events as "종일"), the next one underlined, from every calendar she has checked in Google Calendar. Refreshes on open, every 15 min, and on "새로고침". Read-only. Offline keeps the last agenda; a revoked connection shows "캘린더 다시 연결" on the board, never a modal. |
 
 ### 2.4 Game rules
 **Time windows** (device local time):
@@ -115,8 +116,8 @@ Calendars show the real date (month and day), drawn in the theme's style; they a
 ## 3. TRD
 
 ### 3.1 Stack
-- Next.js (App Router, TypeScript), static export, deployed on Vercel as an installable PWA.
-- Storage: IndexedDB via `idb-keyval` (one small dependency). No backend, no auth.
+- Next.js (App Router, TypeScript), deployed on Vercel as an installable PWA. The page is prerendered static; the only server code is one stateless route, `app/api/google/token` (D21).
+- Storage: IndexedDB via `idb-keyval` (one small dependency). No database, no accounts of our own.
 - Styling: Tailwind CSS with tokens from §4.2.
 - Content (pieces, themes, items) as a typed TS file `content/catalog.ts`.
 - Art: original SVG drawn for this project (see §4.3). No third-party image assets.
@@ -135,8 +136,17 @@ Why no Supabase: one user, one laptop, no competition to protect. A backend adds
 │      ▼                                       │
 │   lib/store.ts ── IndexedDB (state v1)       │
 │ content/catalog.ts (static, versioned)       │
-└──────────────────────────────────────────────┘
+│                                              │
+│ lib/google.ts ── Google sign-in popup (GIS)  │
+│      │   └─ Calendar API (events, read-only) │
+│      ▼                                       │
+└── POST /api/google/token ────────────────────┘
+      stateless Vercel Function: swaps the sign-in code or the
+      refresh token for an access token with the client secret
 ```
+- **Google connection (D21):** GIS code client in popup mode → `/api/google/token` exchanges the code (`redirect_uri: "postmessage"`) and returns a refresh token, kept only in her browser (IndexedDB key `google`, not in `State` or the backup). Access tokens (1 h) live in memory and are renewed through the same route without a popup. Scopes: `calendar.calendarlist.readonly` and `calendar.events.readonly`. The route only talks to `oauth2.googleapis.com`, requires `X-Requested-With: XmlHttpRequest` and a same-origin `Origin`, and logs nothing.
+- **Env:** `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (public) and `GOOGLE_CLIENT_SECRET` (Vercel only, never in the repo). Without the client id the calendar section is hidden.
+- **Agenda logic** (`lib/calendar.ts`, pure, unit tested): today's events from the API items, all-day first, ended ones dropped, next event marked.
 
 ### 3.3 State shape (single IndexedDB key `state`)
 ```ts
@@ -250,7 +260,7 @@ Text on pastel fills uses `--text`, never white (contrast ≥ 4.5:1). Font: Pret
 | Themes (테마) | Right drawer: live room preview per theme + recipe `have/need` | `열기` when complete, then `방에 통째로 적용` |
 | Decorate (꾸미기) | Room with slot highlights (click a slot), bottom sheet with slot tabs + items | click to place, `비우기` |
 | Records (기록) | Right drawer: today, last 7 days, 7-day bars | `백업하기`, `불러오기` (confirm before replacing) |
-| To-dos (할 일) | Right drawer: add field, the list (check, edit, delete, reorder), 인장 count with progress "오늘 3/5", 나에게 주는 상 (add, remove, claim when 인장 ≥ 5), claimed history | `5` or click the wall board |
+| To-dos (할 일) | Right drawer: add field, the list (check, edit, delete, reorder), 인장 count with progress "오늘 3/5", 나에게 주는 상 (add, remove, claim when 인장 ≥ 5), claimed history, 캘린더 (connect / 새로고침 / 연결 끊기, last update time) | `5` or click the wall board |
 
 Navigation: everything is one page; panels open over the room. Small floating menu (4 icons) on the room's left edge, keys `1–4`; hidden in ambient mode.
 
@@ -314,6 +324,8 @@ Research on variable rewards: variable-ratio schedules drive the most consistent
 | D17 | One currency per time window (새벽/낮/노을/밤의 조각), no rarity; piece art in the room's white pencil style; neon glitch theme removed; all light/shadow effects removed (duotone, ground shadow, glows) | User request (2026-10-14): currencies felt scattered; glitch theme and light effects not wanted. Old counts convert by window, nothing is lost. | Keeping 24 piece types with rarities. |
 | D18 | Room always fits whole (meet + overscanned wall/floor); UI sizes in rem off a fluid root font size | User request (2026-10-14): resize naturally with any window or device ratio. Fitting keeps every object visible; overscan avoids letterbox bars; one fluid root size scales the whole UI with no per-component breakpoints. | Cover-crop (calendar and shelf cut off on narrow windows); per-breakpoint layouts. |
 | D19 | Desks drawn 2D with depth: shared trapezoid tabletop, front/side faces in paper tones, back legs | User request (2026-10-14): the desk looked flat. One shared tabletop keeps every theme desk aligned with the desk-object slots. | A true 3D render; per-desk perspective. |
+| D21 | Google Calendar through Google sign-in (OAuth code flow in a popup + refresh token), read-only, all calendars she has checked in Google Calendar | User choice (2026-10-14): the sign-in most services use, connect once like an MCP connector. A refresh token keeps it connected all day without another click; the OAuth app is published "In production" so tokens don't lapse after 7 days (Testing mode). | Token-only client (1 h tokens, a click to renew); secret iCal address (paste a URL). |
+| D22 | Naver Calendar planned as a second source (§7.6) | User request (2026-10-14). | — |
 | D20 | To-do board on the calendar (paper board when empty); 인장: 1 per day for finishing 5 to-dos; spent 5 at a time on self-chosen rewards | User request (2026-10-14). A daily cap and a 5-to-do threshold stop farming by checking trivial items; rewards she writes herself keep it personal and outside the piece economy. | Bonus pieces for to-dos (would mix study and chores in one currency). |
 
 Taste call to revisit after a week of real use: if themes still go too fast, raise recipes rather than shrinking drops (bigger drops are the fun part).
@@ -322,7 +334,7 @@ Sources: [Study Bunny listing](https://gridfiti.com/?p=17933), [Forest on the Ap
 
 ---
 
-## 7. Next Development Steps (planned, not built)
+## 7. Next Development Steps
 
 Captured 2026-10-14 from the user: a wall surface could show a to-do list or her real Google Calendar, so the room becomes a screen she actually works from, not only a backdrop. Rewritten for v0.18 so development can resume from here.
 
@@ -349,7 +361,7 @@ Turn the calendar into a **live board** that shows today's to-dos (step A) and l
 - **Docs first:** SPEC §2.3 (new US-10), §3.3 state, §4.5 screens, D20; AGENTS layout.
 - **Effort:** human ~1 day / CC ~1 hour.
 
-### 7.3 Step B — Google Calendar on the board (read-only)
+### 7.3 Step B — Google Calendar on the board (read-only) — **built in v0.20** as B1 with a refresh token (see US-12, D21, §3.2; the comparison below is kept for the record)
 Show today's events (time + title, next event highlighted) under the to-dos. Read-only: StillRoom never writes to her calendar.
 
 Two ways to get the data; pick one before building (Q7.2):
@@ -371,11 +383,18 @@ Two ways to get the data; pick one before building (Q7.2):
 
 ### 7.4 Open questions for these steps (answer before building)
 - ~~**Q7.1**~~ Answered: an empty calendar slot shows a base paper board.
-- **Q7.2** Calendar source: B2 secret iCal (recommended for a single user, no re-login) or B1 Google sign-in?
-- **Q7.3** Which calendars: primary only, or let her pick several?
+- ~~**Q7.2**~~ Answered: B1 Google sign-in, with a refresh token through one token route so she never re-logs in (D21).
+- ~~**Q7.3**~~ Answered (default): every calendar she has checked in Google Calendar, so the board matches what she sees there.
 - ~~**Q7.4**~~ Answered: a separate currency, 인장 (US-11, D20); pieces stay tied to study time.
 
 Sources: [Use the token model](https://developers.google.com/identity/oauth2/web/guides/use-token-model), [Choose Google Calendar API scopes](https://developers.google.com/workspace/calendar/api/auth), [Sensitive scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification), [Manage App Audience](https://support.google.com/cloud/answer/15549945?hl=en).
+
+### 7.6 Step C — Naver Calendar (planned, not built)
+Show Naver Calendar events on the board next to Google's, same lines and rules as US-12.
+- **What is known (2026-10-14, to re-verify before building):** Naver's public developer APIs (Naver Login) document adding events, not reading them. Reading works over **CalDAV** (`caldav.calendar.naver.com`) with her Naver id and an **app password** (issued after 2-step verification), the way iPhone/Windows calendar apps connect.
+- **Likely shape:** a second stateless route (`app/api/naver/caldav`) that sends a CalDAV `REPORT` for today to Naver with her credentials and returns parsed events (browsers can't call CalDAV cross-origin). The app password is stored only in her browser and sent per request, like the Google refresh token; never logged.
+- **Open questions:** Q7.5 does she keep events in Naver Calendar today (otherwise skip)? Q7.6 is entering an app password once acceptable, given there is no "로그인 버튼" flow for reading?
+- **Effort:** human ~2 days / CC ~2 hours, mostly CalDAV/iCal parsing tests.
 
 ### 7.5 How a step starts
 When the founder says "A단계 시작" (or "B단계 시작"):
