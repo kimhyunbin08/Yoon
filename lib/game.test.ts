@@ -221,7 +221,7 @@ describe("migrate", () => {
       room: {},
     };
     const s = migrate(v1);
-    expect(s.version).toBe(7);
+    expect(s.version).toBe(8);
     expect(s.timer.blocksAwarded).toBe(12);
     expect(s.pieces).toEqual({ dawn: 1 });
     expect("rollsSinceRare" in s).toBe(false);
@@ -269,7 +269,7 @@ describe("migrate", () => {
   it("drops v2's dry-pity counter", () => {
     const v2 = { ...initialState(), version: 2, rollsSinceDrop: 1 };
     const s = migrate(v2);
-    expect(s.version).toBe(7);
+    expect(s.version).toBe(8);
     expect("rollsSinceDrop" in s).toBe(false);
   });
 
@@ -283,7 +283,7 @@ describe("migrate", () => {
 
   it("rejects junk", () => {
     expect(() => migrate(null)).toThrow("INVALID_STATE");
-    expect(() => migrate({ version: 8 })).toThrow("INVALID_STATE");
+    expect(() => migrate({ version: 9 })).toThrow("INVALID_STATE");
     expect(() => migrate({ version: 3, daily: [] })).toThrow("INVALID_STATE");
   });
 });

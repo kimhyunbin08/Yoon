@@ -11,7 +11,7 @@ function CatCalendar() {
       <path d="M180 74 L196 40 L214 70 Z M286 70 L304 40 L320 74 Z" fill={v("white")} />
       <path d="M190 64 L198 50 L206 64 Z M294 64 L302 50 L310 64 Z" fill={v("pink-d")} />
       <rect x="175" y="64" width="150" height="112" rx="18" fill={v("white")} />
-      <path d="M238 92 q3 3 6 0 M256 92 q3 3 6 0" stroke={INK} strokeWidth="1.4" fill="none" />
+      <path d="M238 80 q3 3 6 0 M256 80 q3 3 6 0" stroke={INK} strokeWidth="1.4" fill="none" />
       <CalendarFace x={175} y={92} w={150} h={84} />
     </g>
   );

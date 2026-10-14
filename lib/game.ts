@@ -21,14 +21,20 @@ const V1_BLOCK_MS = 30 * 60_000;
 type Segment = { start: number; end: number | null };
 export type Timer = { segments: Segment[]; blocksAwarded: number; piecesEarned: number }; // piecesEarned: this session
 export type State = {
-  version: 7;
+  version: 8;
   timer: Timer;
   carryMs: number; // focused time left over from previous sessions, < BLOCK_MS
   daily: Record<string, number>; // local YYYY-MM-DD -> focused ms (closed segments only)
   pieces: Partial<Record<PieceId, number>>;
   unlockedThemes: ThemeId[];
   room: Partial<Record<Slot, ItemId>>;
+  todos: Todo[]; // list order; helpers in lib/todos.ts
+  seals: number; // 인장: 1 per day for finishing 5 to-dos
+  sealAwardedOn: string | null; // local YYYY-MM-DD of the last 인장
+  rewards: { id: string; text: string }[]; // her own rewards
+  claimed: { text: string; at: number }[]; // claimed rewards, newest last
 };
+export type Todo = { id: string; text: string; done: boolean; createdAt: number; doneAt: number | null };
 /** One 5-minute drop: `count` pieces of the window it completed in. */
 export type Drop = { window: TimeWindow; count: number; at: number };
 export type Rng = () => number;
@@ -36,13 +42,18 @@ type Result = { state: State; drops: Drop[] };
 
 export function initialState(): State {
   return {
-    version: 7,
+    version: 8,
     timer: { segments: [], blocksAwarded: 0, piecesEarned: 0 },
     carryMs: 0,
     daily: {},
     pieces: {},
     unlockedThemes: [],
     room: {},
+    todos: [],
+    seals: 0,
+    sealAwardedOn: null,
+    rewards: [],
+    claimed: [],
   };
 }
 
@@ -275,7 +286,7 @@ function migratePiecesV7(old: Record<string, unknown>): State["pieces"] {
 
 /** Validates stored or imported state and upgrades older versions. Throws INVALID_STATE. */
 export function migrate(raw: unknown): State {
-  if (!isObj(raw) || ![1, 2, 3, 4, 5, 6, 7].includes(raw.version as number)) throw new Error("INVALID_STATE");
+  if (!isObj(raw) || ![1, 2, 3, 4, 5, 6, 7, 8].includes(raw.version as number)) throw new Error("INVALID_STATE");
   const base = initialState();
   const timer = { ...base.timer, ...(isObj(raw.timer) ? raw.timer : {}) } as Timer;
   // v1 counted 30-minute blocks; v2 counts 5-minute rolls.
@@ -290,7 +301,7 @@ export function migrate(raw: unknown): State {
     : moved;
   const pieces = isObj(raw.pieces) ? migratePiecesV7(raw.pieces) : raw.pieces;
   const unlockedThemes = Array.isArray(raw.unlockedThemes) ? raw.unlockedThemes.filter((t) => t in THEME_BY_ID) : raw.unlockedThemes;
-  const s = { ...base, ...rest, room, pieces, unlockedThemes, version: 7, timer } as State;
+  const s = { ...base, ...rest, room, pieces, unlockedThemes, version: 8, timer } as State; // v8: to-dos, 인장, rewards default via base
   const ok =
     Array.isArray(s.timer.segments) &&
     s.timer.segments.every((g) => isObj(g) && typeof g.start === "number" && (g.end === null || typeof g.end === "number")) &&
@@ -300,7 +311,13 @@ export function migrate(raw: unknown): State {
     isObj(s.daily) &&
     isObj(s.pieces) &&
     isObj(s.room) &&
-    Array.isArray(s.unlockedThemes);
+    Array.isArray(s.unlockedThemes) &&
+    Array.isArray(s.todos) &&
+    s.todos.every((t) => isObj(t) && typeof t.id === "string" && typeof t.text === "string" && typeof t.done === "boolean") &&
+    typeof s.seals === "number" &&
+    (s.sealAwardedOn === null || typeof s.sealAwardedOn === "string") &&
+    Array.isArray(s.rewards) &&
+    Array.isArray(s.claimed);
   if (!ok) throw new Error("INVALID_STATE");
   return s;
 }

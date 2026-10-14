@@ -39,6 +39,7 @@ export const Icon = {
   themes: <Svg><rect x="3" y="3" width="8" height="8" rx="2" /><rect x="13" y="3" width="8" height="8" rx="2" /><rect x="3" y="13" width="8" height="8" rx="2" /><path d="M17 13v8M13 17h8" /></Svg>,
   decorate: <Svg><path d="M4 20l4-1 11-11-3-3L5 16Z" /><path d="M14 6l3 3" /></Svg>,
   records: <Svg><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></Svg>,
+  todos: <Svg><rect x="4" y="3" width="16" height="18" rx="2" /><path d="M8 9l1.5 1.5L12 8M8 15l1.5 1.5L12 14M14 9.5h2.5M14 15.5h2.5" /></Svg>,
   play: <Svg><path d="M7 4l13 8-13 8Z" fill="currentColor" /></Svg>,
   pause: <Svg><path d="M8 4v16M16 4v16" /></Svg>,
   stop: <Svg><rect x="5" y="5" width="14" height="14" rx="3" /></Svg>,
@@ -130,12 +131,13 @@ export function Controls({
   );
 }
 
-export type PanelId = "pieces" | "themes" | "decorate" | "records";
+export type PanelId = "pieces" | "themes" | "decorate" | "records" | "todos";
 const MENU: { id: PanelId; label: string }[] = [
   { id: "pieces", label: "조각함" },
   { id: "themes", label: "테마" },
   { id: "decorate", label: "꾸미기" },
   { id: "records", label: "기록" },
+  { id: "todos", label: "할 일" },
 ];
 
 export function Menu({ active, onOpen }: { active: PanelId | null; onOpen: (p: PanelId) => void }) {

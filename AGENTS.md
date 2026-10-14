@@ -25,9 +25,10 @@ app/                 single page + globals.css (tokens, 8 sky phases)
 components/App.tsx   timer actions, ticking, shortcuts, ambient mode, wake lock
 components/Room.tsx  room scene, slots, window view, window light, line-art group
 components/Hud.tsx   window chip, timer pill, controls, menu, toasts
-components/Panels.tsx pieces, themes, decorate, records
+components/Panels.tsx pieces, themes, decorate, records, to-dos
 components/art/      original SVG art: pieces.tsx, items.tsx (first items), themes/<theme>.tsx (one item per slot)
 lib/game.ts          pure game logic (no I/O)
+lib/todos.ts         pure to-do, 인장, and reward helpers (no I/O)
 lib/store.ts         IndexedDB load/save, backup export/import
 content/catalog.ts   pieces, themes, 12 room slots, recipes, items (typed). Ids are persisted: add, never rename.
 public/              manifest, sw.js, icons

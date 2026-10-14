@@ -49,3 +49,39 @@ test("study, earn pieces, unlock a theme, persist across reload", async ({ page 
   await page.keyboard.press("2");
   await expect(page.getByRole("article").filter({ hasText: "새벽 정원" }).getByText("열림")).toBeVisible();
 });
+
+test("to-dos: add, check, see them on the wall board, persist across reload", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("button", { name: "공부 시작" })).toBeVisible(); // shortcuts attach after load
+  await page.keyboard.press("5");
+  const input = page.getByLabel("새 할 일");
+  await input.fill("영어 단어 30개");
+  await input.press("Enter");
+  await input.fill("수학 문제집 2장");
+  await input.press("Enter");
+  await page.getByRole("checkbox", { name: "영어 단어 30개 끝냄" }).click();
+  await expect(page.getByRole("checkbox", { name: "영어 단어 30개 끝냄" })).toHaveAttribute("aria-checked", "true");
+  await page.keyboard.press("Escape");
+
+  // The paper board on the wall (an empty calendar slot) shows both.
+  const board = page.locator("svg text", { hasText: "수학 문제집 2장" });
+  await expect(board.first()).toBeVisible();
+
+  // Saving is async (IndexedDB); wait for the write before reloading.
+  await expect
+    .poll(() =>
+      page.evaluate(
+        () =>
+          new Promise<number>((resolve) => {
+            const req = indexedDB.open("keyval-store");
+            req.onsuccess = () => {
+              const get = req.result.transaction("keyval").objectStore("keyval").get("state");
+              get.onsuccess = () => resolve(get.result?.todos?.length ?? 0);
+            };
+          }),
+      ),
+    )
+    .toBe(2);
+  await page.reload();
+  await expect(page.locator("svg text", { hasText: "영어 단어 30개" }).first()).toBeVisible();
+});

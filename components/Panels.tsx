@@ -16,6 +16,21 @@ import {
   type ThemeId,
 } from "../content/catalog";
 import { dayKey, missingFor, studiedOn, windowAt, type State } from "../lib/game";
+import {
+  MAX_REWARDS,
+  MAX_TEXT,
+  SEALS_PER_REWARD,
+  TODOS_PER_SEAL,
+  addReward,
+  addTodo,
+  claimReward,
+  doneToday,
+  editTodo,
+  moveTodo,
+  removeReward,
+  removeTodo,
+  toggleTodo,
+} from "../lib/todos";
 import { exportBackup, readBackup, useStore } from "../lib/store";
 import { PieceIcon } from "./art/pieces";
 import { Icon, fmtDuration } from "./Hud";
@@ -307,3 +322,196 @@ export function RecordsPanel({ now, onImport, onClose }: { now: number; onImport
   );
 }
 
+
+const shortDate = (ts: number) => {
+  const d = new Date(ts);
+  return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+};
+const newId = () => crypto.randomUUID();
+
+/** 할 일 drawer (SPEC US-10, US-11): to-dos, 인장, and her own rewards. Every change goes through `apply`. */
+export function TodoPanel({
+  now,
+  apply,
+  onClose,
+}: {
+  now: number;
+  apply: (change: (s: State, now: number) => State) => void;
+  onClose: () => void;
+}) {
+  const state = useStore((s) => s.state);
+  const [draft, setDraft] = useState("");
+  const [rewardDraft, setRewardDraft] = useState("");
+  const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
+  const done = doneToday(state, now);
+  const sealedToday = state.sealAwardedOn === dayKey(now);
+
+  const onRowKey = (e: React.KeyboardEvent, id: string) => {
+    if (e.target !== e.currentTarget) return;
+    if (e.key === "Delete" || e.key === "Backspace") apply((s, t) => removeTodo(s, id, t));
+    else if (e.altKey && e.key === "ArrowUp") apply((s) => moveTodo(s, id, -1));
+    else if (e.altKey && e.key === "ArrowDown") apply((s) => moveTodo(s, id, 1));
+    else if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      apply((s, t) => toggleTodo(s, id, t));
+    }
+  };
+
+  return (
+    <Drawer title="할 일" onClose={onClose}>
+      <form
+        className="mb-3 flex gap-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!draft.trim()) return;
+          apply((s, t) => addTodo(s, draft, t, newId()));
+          setDraft("");
+        }}
+      >
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          maxLength={MAX_TEXT}
+          placeholder="할 일을 적고 Enter"
+          aria-label="새 할 일"
+          className="h-10 flex-1 rounded-full bg-surface-solid px-4 text-sm outline-none ring-1 ring-line focus:ring-2 focus:ring-ring"
+        />
+        <button type="submit" className="h-10 rounded-full bg-primary px-4 text-sm font-semibold text-[#3b3a45]">
+          추가
+        </button>
+      </form>
+      {state.todos.length === 0 ? (
+        <p className="mb-6 text-sm text-muted">오늘 할 일을 적어 보세요. 벽의 종이 보드에 바로 적혀요.</p>
+      ) : (
+        <ul className="mb-2 flex flex-col gap-1" aria-label="할 일 목록">
+          {state.todos.map((t) => (
+            <li
+              key={t.id}
+              tabIndex={0}
+              onKeyDown={(e) => onRowKey(e, t.id)}
+              className="group flex items-center gap-2 rounded-xl bg-surface-solid px-3 py-2 text-sm"
+            >
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={t.done}
+                aria-label={`${t.text} 끝냄`}
+                onClick={() => apply((s, n) => toggleTodo(s, t.id, n))}
+                className={`flex size-5 shrink-0 items-center justify-center rounded-md ring-1 ring-ring ${t.done ? "bg-primary" : ""}`}
+              >
+                {t.done && "✓"}
+              </button>
+              {editing?.id === t.id ? (
+                <input
+                  autoFocus
+                  value={editing.text}
+                  maxLength={MAX_TEXT}
+                  aria-label="할 일 고치기"
+                  onChange={(e) => setEditing({ id: t.id, text: e.target.value })}
+                  onBlur={() => setEditing(null)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      apply((s) => editTodo(s, t.id, editing.text));
+                      setEditing(null);
+                    } else if (e.key === "Escape") setEditing(null);
+                  }}
+                  className="min-w-0 flex-1 rounded-md bg-bg px-2 py-1 outline-none ring-1 ring-ring"
+                />
+              ) : (
+                <span
+                  className={`min-w-0 flex-1 truncate ${t.done ? "text-muted line-through" : ""}`}
+                  onDoubleClick={() => setEditing({ id: t.id, text: t.text })}
+                  title="더블클릭으로 고치기"
+                >
+                  {t.text}
+                </span>
+              )}
+              <span className="flex gap-1 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100">
+                <button type="button" aria-label="위로" onClick={() => apply((s) => moveTodo(s, t.id, -1))} className="rounded px-1 hover:bg-line">
+                  ↑
+                </button>
+                <button type="button" aria-label="아래로" onClick={() => apply((s) => moveTodo(s, t.id, 1))} className="rounded px-1 hover:bg-line">
+                  ↓
+                </button>
+                <button type="button" aria-label="지우기" onClick={() => apply((s, n) => removeTodo(s, t.id, n))} className="rounded px-1 hover:bg-line">
+                  ×
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mb-6 text-xs text-muted">Space 체크 · 더블클릭 고치기 · Delete 지우기 · Alt+↑↓ 순서 · 끝낸 일은 자정에 정리돼요</p>
+
+      <section className="mb-6 rounded-2xl bg-surface-solid p-4" aria-label="인장">
+        <div className="flex items-baseline justify-between">
+          <h3 className="font-semibold">인장</h3>
+          <p className="tabular text-2xl font-semibold">{state.seals}</p>
+        </div>
+        <p className="mt-1 text-sm text-muted">
+          {sealedToday ? "오늘의 인장을 받았어요." : `오늘 끝낸 할 일 ${Math.min(done, TODOS_PER_SEAL)}/${TODOS_PER_SEAL} · 5개를 끝내면 인장 1개 (하루 1개)`}
+        </p>
+      </section>
+
+      <section aria-label="나에게 주는 상">
+        <h3 className="mb-1 font-semibold">나에게 주는 상</h3>
+        <p className="mb-3 text-sm text-muted">인장 {SEALS_PER_REWARD}개를 모으면 하나를 받을 수 있어요.</p>
+        <form
+          className="mb-3 flex gap-2"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!rewardDraft.trim()) return;
+            apply((s) => addReward(s, rewardDraft, newId()));
+            setRewardDraft("");
+          }}
+        >
+          <input
+            value={rewardDraft}
+            onChange={(e) => setRewardDraft(e.target.value)}
+            maxLength={MAX_TEXT}
+            placeholder="예: 케이크 먹기"
+            aria-label="새 상"
+            disabled={state.rewards.length >= MAX_REWARDS}
+            className="h-10 flex-1 rounded-full bg-surface-solid px-4 text-sm outline-none ring-1 ring-line focus:ring-2 focus:ring-ring disabled:opacity-50"
+          />
+          <button type="submit" className="h-10 rounded-full bg-line px-4 text-sm font-semibold">
+            적기
+          </button>
+        </form>
+        <ul className="mb-4 flex flex-col gap-1">
+          {state.rewards.map((r) => (
+            <li key={r.id} className="flex items-center gap-2 rounded-xl bg-surface-solid px-3 py-2 text-sm">
+              <span className="min-w-0 flex-1 truncate">{r.text}</span>
+              <button
+                type="button"
+                disabled={state.seals < SEALS_PER_REWARD}
+                onClick={() => apply((s, n) => claimReward(s, r.id, n))}
+                className="h-8 rounded-full bg-primary px-3 text-xs font-semibold text-[#3b3a45] disabled:bg-line disabled:text-muted"
+              >
+                받기
+              </button>
+              <button type="button" aria-label={`${r.text} 지우기`} onClick={() => apply((s) => removeReward(s, r.id))} className="rounded px-1 hover:bg-line">
+                ×
+              </button>
+            </li>
+          ))}
+        </ul>
+        {state.claimed.length > 0 && (
+          <>
+            <h4 className="mb-1 text-xs font-semibold text-muted">받은 상</h4>
+            <ul className="flex flex-col gap-1 text-xs text-muted">
+              {state.claimed
+                .slice(-5)
+                .reverse()
+                .map((c, i) => (
+                  <li key={`${c.at}-${i}`}>
+                    {shortDate(c.at)} · {c.text}
+                  </li>
+                ))}
+            </ul>
+          </>
+        )}
+      </section>
+    </Drawer>
+  );
+}

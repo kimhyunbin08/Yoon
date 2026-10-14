@@ -3,12 +3,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { PIECES, PIECE_BY_ID, THEME_BY_ID, type ItemId, type Slot, type ThemeId } from "../content/catalog";
 import * as game from "../lib/game";
 import { store, useStore } from "../lib/store";
+import { clearDone } from "../lib/todos";
 import { Controls, Menu, TimerPill, Toasts, WindowChip, fmtDuration, useNow, type PanelId, type Toast } from "./Hud";
-import { DecoratePanel, PiecesPanel, RecordsPanel, ThemesPanel } from "./Panels";
+import { DecoratePanel, PiecesPanel, RecordsPanel, ThemesPanel, TodoPanel } from "./Panels";
 import { Room } from "./Room";
 
 const IDLE_MS = 8_000;
-const PANEL_KEYS: Record<string, PanelId> = { "1": "pieces", "2": "themes", "3": "decorate", "4": "records" };
+const PANEL_KEYS: Record<string, PanelId> = { "1": "pieces", "2": "themes", "3": "decorate", "4": "records", "5": "todos" };
 
 export default function App() {
   const loaded = useStore((s) => s.loaded);
@@ -58,8 +59,10 @@ export default function App() {
     if (!loaded) return;
     let first = true;
     const run = () => {
-      const r = game.tick(store.get(), Date.now(), Math.random);
-      if (r.state !== store.get()) store.set(r.state);
+      const now = Date.now();
+      const r = game.tick(store.get(), now, Math.random);
+      const next = clearDone(r.state, now); // finished to-dos leave the board at local midnight
+      if (next !== store.get()) store.set(next);
       announce(r.drops, first);
       first = false;
     };
@@ -113,6 +116,26 @@ export default function App() {
       else document.documentElement.requestFullscreen?.().catch(() => {});
     },
   };
+  // To-dos, 인장, and rewards: one path so 인장 changes always get a toast (SPEC US-11).
+  const applyTodos = useCallback(
+    (change: (s: game.State, now: number) => game.State) => {
+      const before = store.get();
+      let next: game.State;
+      try {
+        next = change(before, Date.now());
+      } catch {
+        toast("인장이 부족해요");
+        return;
+      }
+      if (next === before) return;
+      store.set(next);
+      if (next.seals > before.seals) toast(`오늘의 인장을 받았어요 · 인장 ${next.seals}개`);
+      else if (next.claimed.length > before.claimed.length) toast(`'${next.claimed.at(-1)!.text}' 상을 받았어요`);
+      else if (next.seals < before.seals) toast("오늘 끝낸 할 일이 5개 아래로 줄어서 인장을 돌려놓았어요");
+    },
+    [toast],
+  );
+
   const actRef = useRef(act);
   useEffect(() => {
     actRef.current = act;
@@ -188,6 +211,7 @@ export default function App() {
         phase={phase}
         highlight={panel === "decorate" ? slot : undefined}
         onSlot={setSlot}
+        onBoard={() => setPanel("todos")}
         className="absolute inset-0 h-full w-full"
       />
 
@@ -215,6 +239,7 @@ export default function App() {
       {panel === "pieces" && <PiecesPanel now={now} onClose={() => setPanel(null)} />}
       {panel === "themes" && <ThemesPanel phase={phase} onUnlock={act.unlock} onApply={act.apply} onClose={() => setPanel(null)} />}
       {panel === "decorate" && <DecoratePanel slot={slot} onSlot={setSlot} onPlace={act.place} onClose={() => setPanel(null)} />}
+      {panel === "todos" && <TodoPanel now={now} apply={applyTodos} onClose={() => setPanel(null)} />}
       {panel === "records" && (
         <RecordsPanel
           now={now}

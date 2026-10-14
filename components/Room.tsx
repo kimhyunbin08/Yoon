@@ -2,7 +2,7 @@
 import { memo, useId, type ReactNode } from "react";
 import { ITEM_BY_ID, type ItemId, type SkyPhase, type Slot, type WindowView } from "../content/catalog";
 import { ITEM_ART } from "./art/items";
-import { BackLegs, DeskLeg, DeskTop, OVER } from "./art/shared";
+import { BackLegs, DeskLeg, DeskTop, OVER, PaperBoard } from "./art/shared";
 
 // Stage is 1440x900 and always fits whole ("meet"); the wall, floor, baseboard, and floor lines are
 // overscanned (OVER) so any leftover space continues the room instead of showing bars (SPEC §4.3, D18).
@@ -48,10 +48,12 @@ type Props = {
   /** undefined: normal view. null or a slot: decorate mode. */
   highlight?: Slot | null;
   onSlot?: (slot: Slot) => void;
+  /** Click on the wall board (calendar slot) outside decorate mode. */
+  onBoard?: () => void;
   className?: string;
 };
 
-function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
+function RoomScene({ room, phase, highlight, onSlot, onBoard, className }: Props) {
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   const item = (slot: Slot) => {
     const id = room[slot];
@@ -137,7 +139,12 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
         <rect x="522" y="295" width="396" height="10" fill={v("white")} />
         <rect x="480" y="496" width="480" height="22" rx="10" fill={v("cream")} />
         {Art("windowCover")}
-        {Art("calendar")}
+        {Art("calendar") ?? (
+          // an empty calendar slot still shows a plain paper board for the to-dos (SPEC US-10)
+          <g className={PLACE.calendar!.className} transform={placeTransform(PLACE.calendar!)}>
+            <PaperBoard />
+          </g>
+        )}
         {Art("wallDecor")}
         {Art("lighting")}
 
@@ -156,6 +163,20 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
         {Art("deskObject2") ?? <BaseDeskObjects />}
       </g>
 
+
+      {highlight === undefined && onBoard && (
+        <rect
+          x={SLOT_RECTS.calendar[0]}
+          y={SLOT_RECTS.calendar[1]}
+          width={SLOT_RECTS.calendar[2]}
+          height={SLOT_RECTS.calendar[3]}
+          fill="transparent"
+          style={{ cursor: "pointer" }}
+          onClick={onBoard}
+        >
+          <title>할 일 열기 (5)</title>
+        </rect>
+      )}
 
       {highlight !== undefined && (
         <g>

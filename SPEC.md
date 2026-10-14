@@ -1,7 +1,7 @@
 # StillRoom — Product Spec
 
 Source: user interview (2026-10).
-Status: v0.18 (implemented; §7 planned). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
+Status: v0.19 (implemented; §7 step B planned). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
 Sections: 1 Ideation · 2 PRD · 3 TRD · 4 Design Spec · 5 Open Questions · 6 Market Research & Decisions · 7 Next Development Steps (planned, not built). Agent instructions live in `AGENTS.md`.
 
 Platform decision: **laptop only** (desktop browser, landscape). No phone, no tablet, no sync.
@@ -62,6 +62,8 @@ Accounts, sync, mobile/tablet layouts, social, rankings, payments, native apps, 
 | US-7 | decorate her room | The room is split into 13 component slots (§4.3). Each theme brings 8–9 items that suit it (not every slot), and each slot is set independently, so she can mix items across themes (e.g. the café latte on the cat desk). Empty slots show the base room. "방에 통째로 적용" places all of a theme's items. |
 | US-8 | see how long she studied | Today total on the room; 7-day bars in Records. |
 | US-9 | not lose her room | Export / import a backup JSON file. Reminder after every 3rd unlocked theme. |
+| US-10 | keep today's to-dos on the wall | The calendar on the right wall is a paper board showing the date and up to 4 to-dos (open first, then today's done ones struck through, "+N" for the rest). An empty calendar slot shows a plain paper board. Click the board or press `5` to open the 할 일 drawer: Enter adds, click/Space checks, double-click edits, Delete removes, Alt+↑/↓ reorders. Done items clear at local midnight. Max 50 items, 80 chars each. No due times or alarms. |
+| US-11 | reward herself | Finishing **5 to-dos in a day earns 1 인장** (max 1 per day; unchecking below 5 the same day takes it back unless it was already spent). She writes her own rewards in the drawer ("나에게 주는 상", max 10). With **5 인장** she can claim one; it costs 5 and is logged with the date. Today's 인장 shows as a pencil stamp on the board. |
 
 ### 2.4 Game rules
 **Time windows** (device local time):
@@ -139,13 +141,18 @@ Why no Supabase: one user, one laptop, no competition to protect. A backend adds
 ### 3.3 State shape (single IndexedDB key `state`)
 ```ts
 type State = {
-  version: 7; // … v6 drops placed items that no longer exist; v7 merges the 24 old piece types into 4 window pieces and drops rarity
+  version: 8; // … v7 merges the 24 old piece types into 4 window pieces and drops rarity; v8 adds to-dos, 인장, and rewards
   timer: { segments: { start: number; end: number | null }[]; blocksAwarded: number; piecesEarned: number }; // open segment = running; piecesEarned resets on start
   carryMs: number; // leftover focus from earlier sessions, < 5 min
   daily: Record<string, number>; // local YYYY-MM-DD -> focused ms, split at midnight
   pieces: Partial<Record<TimeWindow, number>>; // 새벽/낮/노을/밤의 조각
   unlockedThemes: ThemeId[];
   room: Partial<Record<Slot, ItemId>>;
+  todos: { id: string; text: string; done: boolean; createdAt: number; doneAt: number | null }[]; // list order
+  seals: number; // 인장
+  sealAwardedOn: string | null; // local YYYY-MM-DD of the last 인장, so it is at most one per day
+  rewards: { id: string; text: string }[]; // her own rewards, max 10
+  claimed: { text: string; at: number }[]; // claimed rewards, newest last, max 100
 };
 ```
 
@@ -243,6 +250,7 @@ Text on pastel fills uses `--text`, never white (contrast ≥ 4.5:1). Font: Pret
 | Themes (테마) | Right drawer: live room preview per theme + recipe `have/need` | `열기` when complete, then `방에 통째로 적용` |
 | Decorate (꾸미기) | Room with slot highlights (click a slot), bottom sheet with slot tabs + items | click to place, `비우기` |
 | Records (기록) | Right drawer: today, last 7 days, 7-day bars | `백업하기`, `불러오기` (confirm before replacing) |
+| To-dos (할 일) | Right drawer: add field, the list (check, edit, delete, reorder), 인장 count with progress "오늘 3/5", 나에게 주는 상 (add, remove, claim when 인장 ≥ 5), claimed history | `5` or click the wall board |
 
 Navigation: everything is one page; panels open over the room. Small floating menu (4 icons) on the room's left edge, keys `1–4`; hidden in ambient mode.
 
@@ -306,6 +314,7 @@ Research on variable rewards: variable-ratio schedules drive the most consistent
 | D17 | One currency per time window (새벽/낮/노을/밤의 조각), no rarity; piece art in the room's white pencil style; neon glitch theme removed; all light/shadow effects removed (duotone, ground shadow, glows) | User request (2026-10-14): currencies felt scattered; glitch theme and light effects not wanted. Old counts convert by window, nothing is lost. | Keeping 24 piece types with rarities. |
 | D18 | Room always fits whole (meet + overscanned wall/floor); UI sizes in rem off a fluid root font size | User request (2026-10-14): resize naturally with any window or device ratio. Fitting keeps every object visible; overscan avoids letterbox bars; one fluid root size scales the whole UI with no per-component breakpoints. | Cover-crop (calendar and shelf cut off on narrow windows); per-breakpoint layouts. |
 | D19 | Desks drawn 2D with depth: shared trapezoid tabletop, front/side faces in paper tones, back legs | User request (2026-10-14): the desk looked flat. One shared tabletop keeps every theme desk aligned with the desk-object slots. | A true 3D render; per-desk perspective. |
+| D20 | To-do board on the calendar (paper board when empty); 인장: 1 per day for finishing 5 to-dos; spent 5 at a time on self-chosen rewards | User request (2026-10-14). A daily cap and a 5-to-do threshold stop farming by checking trivial items; rewards she writes herself keep it personal and outside the piece economy. | Bonus pieces for to-dos (would mix study and chores in one currency). |
 
 Taste call to revisit after a week of real use: if themes still go too fast, raise recipes rather than shrinking drops (bigger drops are the fun part).
 
@@ -327,14 +336,14 @@ Captured 2026-10-14 from the user: a wall surface could show a to-do list or her
 ### 7.1 Goal
 Turn the calendar into a **live board** that shows today's to-dos (step A) and later today's events (step B), drawn in the room's pencil style. The room stays calm (§1.3): no reminders, no badges, no notifications. Something to glance at, like a real corkboard.
 
-### 7.2 Step A — To-do board (local, no accounts)
+### 7.2 Step A — To-do board (local, no accounts) — **built in v0.19** (see US-10, US-11, D20)
 **What she gets:** while studying, today's to-dos are written on the big calendar on the right wall; she checks them off without leaving the room.
 
 - **Where:** on whatever calendar item is placed. If the calendar slot is empty, a plain base paper board (new base art, like the base desk) appears there, so the board always exists. (Q7.1)
 - **Board layout (inside the calendar's 150×112 drawing box, shown ×1.7):** date shrinks to one header line ("10월 14일 수요일"); below it up to **4** open to-dos as pencil-written lines (SVG `<text>`, Pretendard), done ones struck through until midnight; more than 4 → "+3". Empty list → "할 일을 적어 보세요" in muted ink.
 - **Editing:** click the board or press `5` (a new 5th menu item "할 일") → a right drawer like the other panels: type + Enter to add, click/Space to check, double-click to edit, Delete to remove, Alt+↑/↓ to reorder. Keyboard first.
 - **Rules:** max 50 items, text ≤ 80 chars (trimmed; empty ignored). Done items are cleared at local midnight on the next tick, not deleted mid-day. No due times, no alarms, no pieces for finishing (Q7.4).
-- **State v8:** `todos: { id: string; text: string; done: boolean; createdAt: number; doneAt: number | null }[]` in list order. `migrate()` v7 → v8 fills `[]`; included in the JSON backup automatically (it is part of State).
+- **State v8:** see §3.3 (`todos`, `seals`, `sealAwardedOn`, `rewards`, `claimed`). `migrate()` v7 → v8 fills defaults; all of it is in the JSON backup.
 - **Code:** pure helpers in `lib/todos.ts` (add, toggle, edit, remove, move, clearDone(now)); UI in `components/Panels.tsx` (TodoPanel) and a `TodoBoard` drawn by `components/Room.tsx` inside the calendar placement.
 - **Tests:** unit for every helper incl. limits and midnight clearing, migration v7 → v8; e2e: add two, check one, reload, both persist and the board shows them.
 - **Docs first:** SPEC §2.3 (new US-10), §3.3 state, §4.5 screens, D20; AGENTS layout.
@@ -361,10 +370,10 @@ Two ways to get the data; pick one before building (Q7.2):
 - **Effort:** B2 human ~2 days / CC ~2 hours; B1 similar code but more console setup.
 
 ### 7.4 Open questions for these steps (answer before building)
-- **Q7.1** Empty calendar slot: show a base paper board so the to-dos are always visible (recommended), or show to-dos only when a calendar item is placed?
+- ~~**Q7.1**~~ Answered: an empty calendar slot shows a base paper board.
 - **Q7.2** Calendar source: B2 secret iCal (recommended for a single user, no re-login) or B1 Google sign-in?
 - **Q7.3** Which calendars: primary only, or let her pick several?
-- **Q7.4** Should finished to-dos count toward anything (e.g., a bonus piece)? Default no: rewards stay tied to study time only.
+- ~~**Q7.4**~~ Answered: a separate currency, 인장 (US-11, D20); pieces stay tied to study time.
 
 Sources: [Use the token model](https://developers.google.com/identity/oauth2/web/guides/use-token-model), [Choose Google Calendar API scopes](https://developers.google.com/workspace/calendar/api/auth), [Sensitive scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification), [Manage App Audience](https://support.google.com/cloud/answer/15549945?hl=en).
 
