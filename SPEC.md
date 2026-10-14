@@ -1,7 +1,7 @@
 # StillRoom — Product Spec
 
 Source: user interview (2026-10).
-Status: v0.10 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
+Status: v0.11 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
 Sections: 1 Ideation · 2 PRD · 3 TRD · 4 Design Spec · 5 Open Questions · 6 Market Research & Decisions. Agent instructions live in `AGENTS.md`.
 
 Platform decision: **laptop only** (desktop browser, landscape). No phone, no tablet, no sync.
@@ -79,7 +79,15 @@ Accounts, sync, mobile/tablet layouts, social, rankings, payments, native apps, 
 - Paused time does not count. No caps of any kind.
 - Minutes left over when a session ends (under 5) carry into the next session, so stopping never loses progress.
 
-**Themes**: a theme costs a recipe of 105–140 pieces (≈ 3–4 focused hours, mostly in its windows) from 1–2 windows and unlocks 2–4 room items plus a matching window view. MVP content: 4 themes, 24 piece types (6 per window). Add themes after she has used it for a week.
+**Themes**: a theme costs a recipe of 105–140 pieces (≈ 3–4 focused hours, mostly in its windows) from 1–2 windows and unlocks 2–5 room items plus a matching window view. Content: 5 themes, 24 piece types (6 per window). Add themes after she has used it for a week.
+
+| Theme | Recipe (windows) | Items |
+|---|---|---|
+| 새벽 정원 dawn-garden | dawn + day, 105 | garden window, plant shelf, mint rug |
+| 햇살 카페 sunny-cafe | day + evening, 120 | latte & cake, pendant lamp, menu board |
+| 노을 고양이 sunset-cat | evening, 105 | sleeping cat, sunset poster, books & cactus |
+| 별밤 도서관 starry-library | night + dawn, 140 | night-sea window, star garland, candle & books, moon clock |
+| 네온 글리치 neon-glitch | night + evening, 115 (star 30, firefly 30, warm-light 25, sunset-glass 15, letter 10, aurora 5) | city-night window with blinds, neon sign, boombox & cassettes, neon tube, CRT monitor |
 
 ---
 
@@ -185,6 +193,7 @@ Text on pastel fills uses `--text`, never white (contrast ≥ 4.5:1). Font: Pret
   - **Window light:** a shaft from the window glass falls diagonally down-right to the floor. Inside it, `--light` (a saturated per-phase color) is applied twice: an `overlay` layer that makes lines and shadows inside the light glow in color, and a low-opacity `multiply` wash so white surfaces show the color too. Outside it, everything is shaded with `--shade` at `--shade-opacity`.
   - **Leaf shadow:** a soft palm-leaf shadow inside the light patch on the floor.
   - **Ground shadows** under the desk; **base decor:** a tall leafy floor plant at the left wall.
+  - **Neon glitch theme (retro punk):** its neon sign, neon tube, CRT screen, and lit city windows are light sources, so they are the only theme art allowed to carry color: `--neon-pink` `#FF4FA3` and `--neon-cyan` `#2DE2E6`, plus colored glows that stay faintly visible even at midday (`max(var(--glow), 0.35)`). Glitch is static: an RGB-split filter on the theme's items (red and cyan fringes on the pencil lines), CRT scanlines, and a few offset glitch bars. No animation.
   - Static only (no animated light), so the room stays cheap to leave open for hours.
 
 | Phase | `--light` |
@@ -285,6 +294,7 @@ Research on variable rewards: variable-ratio schedules drive the most consistent
 | D10 | ~~Prism backdrop on white~~ (blooms removed in D12): ivory wall/floor with time-of-day pastel blooms; UI accent becomes ivory; focus/outline use deep ivory `--ring` | User request (2026-10-13) with a "+prism" mood board. Radial gradients instead of blur filters keep an all-day backdrop cheap. A separate `--ring` keeps focus visible, since ivory on white is invisible. | Per-theme bloom colors; wall-only change; lavender accent kept. |
 | D11 | Lofi line-art form: outlines on furniture and items, window light beam via outside shading, leaf shadow, ground shadows, floor plant | User request (2026-10-13) with a lofi room reference (form only). Redrawing the existing SVG keeps time-of-day color, decorating, and crisp scaling. Outlines come from one CSS rule on a group, so new art gets them for free. | AI-generated raster background (breaks slot alignment and the original-SVG rule). |
 | D12 | White scene; color only from light and shadow; colored-pencil lines; outlined window view; tower and prism blooms removed; window light via overlay + multiply wash | User request (2026-10-13). Overlay alone does nothing on pure white, so a light multiply wash carries the color on white surfaces while overlay saturates lines and shadows. Palette remap is scoped to the room so collectible icons stay colorful. | Recoloring each art component by hand; overlay only (invisible on white). |
+| D13 | Neon glitch theme: a 5th unlockable theme, static glitch (RGB split, scanlines, glitch bars), neon colors only on light-emitting parts | User request (2026-10-14): one retro-punk glitch theme, still (not animated). Keeps the "color only from light" rule by making neon and screens the light. | Whole-room glitch mode; periodic glitch flicker. |
 
 Taste call to revisit after a week of real use: if themes still go too fast, raise recipes rather than shrinking drops (bigger drops are the fun part).
 

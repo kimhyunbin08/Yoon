@@ -77,6 +77,9 @@
   --line-art: color-mix(in oklab, var(--prism-1) 30%, #4a4857);
   --shade: color-mix(in oklab, var(--prism-1) 55%, #4a4857);
   --shade-opacity: 0.1;
+  /* neon glitch theme: light-emitting parts only (SPEC §4.3) */
+  --neon-pink: #ff4fa3;
+  --neon-cyan: #2de2e6;
   /* window light: a saturated color per phase (SPEC §4.3) */
   --light: #ffd27a;
   --light-wash: 0.28;

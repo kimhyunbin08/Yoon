@@ -1,7 +1,7 @@
 "use client";
 import { memo, useId, type ReactNode } from "react";
 import { ITEM_BY_ID, type ItemId, type SkyPhase, type Slot, type WindowView } from "../content/catalog";
-import { ITEM_ART, ITEM_GLOWS } from "./art/items";
+import { ITEM_ART, ITEM_GLOWS, type Glow } from "./art/items";
 
 // Stage is 1440x900. preserveAspectRatio="slice" crops the side walls on narrow windows,
 // never the window or the desk (SPEC §4.3). Inside `.room` the art palette maps to paper whites
@@ -37,7 +37,7 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
   };
   const windowItem = item("window");
   const view: WindowView = (windowItem && (ITEM_BY_ID[windowItem] as { view?: WindowView }).view) || "hills";
-  const glows = [{ cx: 1118, cy: 520, r: 300 }, ...(["lighting", "desk"] as const).flatMap((s) => ITEM_GLOWS[item(s) ?? ""] ?? [])];
+  const glows: Glow[] = [{ cx: 1118, cy: 520, r: 300 }, ...(Object.keys(SLOT_RECTS) as Slot[]).flatMap((s) => ITEM_GLOWS[item(s) ?? ""] ?? [])];
   const Art = (slot: Slot) => {
     const id = item(slot);
     const C = id ? ITEM_ART[id] : null;
@@ -61,6 +61,20 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
           <stop offset="0" style={{ stopColor: "var(--c-glow)", stopOpacity: 0.7 }} />
           <stop offset="1" style={{ stopColor: "var(--c-glow)", stopOpacity: 0 }} />
         </radialGradient>
+        {(["pink", "cyan"] as const).map((c) => (
+          <radialGradient key={c} id={`glow-${c}${uid}`}>
+            <stop offset="0" style={{ stopColor: `var(--neon-${c})`, stopOpacity: 0.55 }} />
+            <stop offset="1" style={{ stopColor: `var(--neon-${c})`, stopOpacity: 0 }} />
+          </radialGradient>
+        ))}
+        {/* neon glitch theme: frozen RGB split, red copy left, cyan copy right (same id in every Room; identical content) */}
+        <filter id="stillroom-rgbsplit" x="-5%" y="-10%" width="110%" height="120%">
+          <feOffset in="SourceGraphic" dx="-3" result="left" />
+          <feColorMatrix in="left" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="red" />
+          <feOffset in="SourceGraphic" dx="3" result="right" />
+          <feColorMatrix in="right" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" result="cyan" />
+          <feBlend in="red" in2="cyan" mode="screen" />
+        </filter>
         {/* window light fades from the glass to the floor */}
         <linearGradient id={`light${uid}`} gradientUnits="userSpaceOnUse" x1="720" y1="118" x2="1050" y2="900">
           <stop offset="0" style={{ stopColor: "var(--light)", stopOpacity: 1 }} />
@@ -163,9 +177,14 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
       <path d={WINDOW_LIGHT} mask={`url(#light-mask${uid})`} fill={`url(#light${uid})`} style={{ opacity: 0.85, mixBlendMode: "overlay" }} />
 
       <rect width="1440" height="900" style={{ fill: "var(--tint)", opacity: "var(--tint-opacity)", mixBlendMode: "multiply" }} />
-      {glows.map((g, i) => (
-        <circle key={i} cx={g.cx} cy={g.cy} r={g.r} fill={`url(#glow${uid})`} style={{ opacity: "var(--glow)", mixBlendMode: "screen" }} />
-      ))}
+      {glows.map((g, i) =>
+        g.color ? (
+          // neon is its own light source: still faintly visible at midday
+          <circle key={i} cx={g.cx} cy={g.cy} r={g.r} fill={`url(#glow-${g.color}${uid})`} style={{ opacity: "max(var(--glow), 0.35)", mixBlendMode: "screen" }} />
+        ) : (
+          <circle key={i} cx={g.cx} cy={g.cy} r={g.r} fill={`url(#glow${uid})`} style={{ opacity: "var(--glow)", mixBlendMode: "screen" }} />
+        ),
+      )}
 
       {highlight !== undefined &&
         (Object.keys(SLOT_RECTS) as Slot[]).map((slot) => {
@@ -351,6 +370,37 @@ function View({ view }: { view: WindowView }) {
         {[[560, 420], [640, 430], [790, 418], [870, 432], [700, 440]].map(([x, y], i) => (
           <circle key={i} cx={x} cy={y} r="6" fill={v("cream")} />
         ))}
+      </g>
+    );
+  }
+  if (view === "city") {
+    // Night skyline; lit windows are light, so they carry the neon colors.
+    const towers: [number, number, number][] = [
+      [508, 380, 58], [570, 330, 46], [620, 400, 70], [694, 300, 52], [750, 360, 64], [818, 320, 48], [870, 390, 60],
+    ];
+    return (
+      <g>
+        {towers.map(([x, top, w]) => (
+          <rect key={x} x={x} y={top} width={w} height={500 - top} fill={v("white")} />
+        ))}
+        <path d="M720 300 V270" stroke="var(--line-art)" strokeWidth="2" />
+        {towers.flatMap(([x, top, w], ti) =>
+          Array.from({ length: Math.floor((482 - top) / 22) }, (_, r) =>
+            [0, 1].map((c) =>
+              (ti + r + c) % 3 === 0 ? null : (
+                <rect
+                  key={`${x}-${r}-${c}`}
+                  x={x + 8 + c * (w / 2)}
+                  y={top + 10 + r * 22}
+                  width={w / 2 - 16}
+                  height="8"
+                  opacity="0.85"
+                  style={{ fill: (ti + r) % 2 ? "var(--neon-cyan)" : "var(--neon-pink)" }}
+                />
+              ),
+            ),
+          ),
+        )}
       </g>
     );
   }

@@ -98,11 +98,17 @@ export const THEMES = [
     descriptionKo: "촛불, 별 전구, 밤바다가 보이는 창",
     recipe: { star: 40, candle: 30, firefly: 30, moon: 10, letter: 10, aurora: 5, mug: 15 },
   },
+  {
+    id: "neon-glitch",
+    nameKo: "네온 글리치",
+    descriptionKo: "CRT 화면과 네온 간판, 지지직거리는 밤",
+    recipe: { star: 30, firefly: 30, "warm-light": 25, "sunset-glass": 15, letter: 10, aurora: 5 },
+  },
 ] as const satisfies readonly ThemeDef[];
 export type ThemeId = (typeof THEMES)[number]["id"];
 export type Theme = (typeof THEMES)[number];
 
-export type WindowView = "hills" | "garden" | "sea";
+export type WindowView = "hills" | "garden" | "sea" | "city";
 type ItemDef = { id: string; themeId: ThemeId; slot: Slot; nameKo: string; view?: WindowView };
 
 export const ITEMS = [
@@ -122,6 +128,12 @@ export const ITEMS = [
   { id: "star-garland", themeId: "starry-library", slot: "lighting", nameKo: "별 전구" },
   { id: "candle-books", themeId: "starry-library", slot: "desk", nameKo: "촛불과 책" },
   { id: "moon-clock", themeId: "starry-library", slot: "wall", nameKo: "달 시계" },
+
+  { id: "city-window", themeId: "neon-glitch", slot: "window", nameKo: "도시 야경 창", view: "city" },
+  { id: "neon-sign", themeId: "neon-glitch", slot: "wall", nameKo: "네온 간판" },
+  { id: "boombox", themeId: "neon-glitch", slot: "shelf", nameKo: "붐박스와 카세트" },
+  { id: "neon-tube", themeId: "neon-glitch", slot: "lighting", nameKo: "네온 막대" },
+  { id: "crt-monitor", themeId: "neon-glitch", slot: "desk", nameKo: "CRT 모니터" },
 ] as const satisfies readonly ItemDef[];
 export type ItemId = (typeof ITEMS)[number]["id"];
 export type Item = (typeof ITEMS)[number];
