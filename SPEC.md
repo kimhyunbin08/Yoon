@@ -369,7 +369,7 @@ Two ways to get the data; pick one before building (Q7.2):
 Sources: [Use the token model](https://developers.google.com/identity/oauth2/web/guides/use-token-model), [Choose Google Calendar API scopes](https://developers.google.com/workspace/calendar/api/auth), [Sensitive scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification), [Manage App Audience](https://support.google.com/cloud/answer/15549945?hl=en).
 
 ### 7.5 How a step starts
-When she says "A단계 시작" (or "B단계 시작"):
+When the founder says "A단계 시작" (or "B단계 시작"):
 1. Ask only the open questions for that step (A: Q7.1, Q7.4; B: Q7.2, Q7.3) with the recommended option first.
 2. Update SPEC (and AGENTS if layout changes) with the answers before writing code.
 3. Build, run every check in §7.0, screenshot the board in at least two themes and two window sizes.
