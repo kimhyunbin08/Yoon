@@ -1,7 +1,7 @@
 # StillRoom — Product Spec
 
 Source: user interview (2026-10).
-Status: v0.18 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
+Status: v0.18 (implemented; §7 planned). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
 Sections: 1 Ideation · 2 PRD · 3 TRD · 4 Design Spec · 5 Open Questions · 6 Market Research & Decisions · 7 Next Development Steps (planned, not built). Agent instructions live in `AGENTS.md`.
 
 Platform decision: **laptop only** (desktop browser, landscape). No phone, no tablet, no sync.
@@ -315,18 +315,29 @@ Sources: [Study Bunny listing](https://gridfiti.com/?p=17933), [Forest on the Ap
 
 ## 7. Next Development Steps (planned, not built)
 
-Captured 2026-10-14 from the user: the wall board (today the 햇살 카페 menu board) could show a to-do list or a real Google Calendar, so the room becomes a screen she actually works from, not only a backdrop.
+Captured 2026-10-14 from the user: a wall surface could show a to-do list or her real Google Calendar, so the room becomes a screen she actually works from, not only a backdrop. Rewritten for v0.18 so development can resume from here.
+
+### 7.0 Where things stand (v0.18, 2026-10-14)
+- Live: https://stillroom-app.vercel.app. Every push to `main` deploys (Vercel project `jogakbang`, team Meditor).
+- State **v7** (`lib/game.ts` `migrate()` upgrades v1–v7). 13 room slots, 4 themes (35 items), 4 window pieces, 1–5 pieces per 5 focused minutes.
+- Room: white paper + colored-pencil outlines, color only in the window sky, fits any desktop window (meet + overscan), fluid rem UI.
+- Checks: `npm run typecheck`, `npm run lint`, `npx knip`, `npm test` (31 unit), `npm run test:e2e` (1 smoke), `npm run build`. All clean at v0.18.
+- The **calendar slot** (large, right wall, real date) is where the board will live. Calendar items exist in 새벽 정원 (flower), 햇살 카페 (tear-off), 노을 고양이 (cat-ear); 별밤 도서관 has none.
 
 ### 7.1 Goal
-Turn a wall surface into a **live board** that shows today's to-dos and today's calendar, drawn in the room's pencil style. The room stays calm (§1.3): no reminders, no badges, no notifications. It is something to glance at, like a real corkboard.
+Turn the calendar into a **live board** that shows today's to-dos (step A) and later today's events (step B), drawn in the room's pencil style. The room stays calm (§1.3): no reminders, no badges, no notifications. Something to glance at, like a real corkboard.
 
 ### 7.2 Step A — To-do board (local, no accounts)
-- **Where:** the `calendar` slot (§4.3) is the natural home: every theme already has a calendar item drawn there, so the live to-dos and agenda can render on whichever calendar she placed. (Open question Q7.1.)
-- **In the room:** up to 5 open to-dos as handwritten-style lines (SVG `<text>`, Pretendard), done ones struck through for the rest of the day. If there are more, show "+3".
-- **Editing:** click the board or press `5` → a right drawer like the other panels: add (Enter), check off, edit, delete, drag to reorder. Keyboard first.
-- **Rules:** done items clear at local midnight (kept in history for Records later). No due times, no alarms.
-- **State:** v7 adds `todos: { id; text; done; createdAt; doneAt | null; order }[]` (max 50, text ≤ 80 chars). Migration fills `[]`. Included in JSON backup.
-- **Tests:** pure helpers in `lib/game.ts`-style module (`lib/todos.ts`): add/toggle/reorder/clear-at-midnight, migration v6 → v7; e2e: add, check, reload, persists.
+**What she gets:** while studying, today's to-dos are written on the big calendar on the right wall; she checks them off without leaving the room.
+
+- **Where:** on whatever calendar item is placed. If the calendar slot is empty, a plain base paper board (new base art, like the base desk) appears there, so the board always exists. (Q7.1)
+- **Board layout (inside the calendar's 150×112 drawing box, shown ×1.7):** date shrinks to one header line ("10월 14일 수요일"); below it up to **4** open to-dos as pencil-written lines (SVG `<text>`, Pretendard), done ones struck through until midnight; more than 4 → "+3". Empty list → "할 일을 적어 보세요" in muted ink.
+- **Editing:** click the board or press `5` (a new 5th menu item "할 일") → a right drawer like the other panels: type + Enter to add, click/Space to check, double-click to edit, Delete to remove, Alt+↑/↓ to reorder. Keyboard first.
+- **Rules:** max 50 items, text ≤ 80 chars (trimmed; empty ignored). Done items are cleared at local midnight on the next tick, not deleted mid-day. No due times, no alarms, no pieces for finishing (Q7.4).
+- **State v8:** `todos: { id: string; text: string; done: boolean; createdAt: number; doneAt: number | null }[]` in list order. `migrate()` v7 → v8 fills `[]`; included in the JSON backup automatically (it is part of State).
+- **Code:** pure helpers in `lib/todos.ts` (add, toggle, edit, remove, move, clearDone(now)); UI in `components/Panels.tsx` (TodoPanel) and a `TodoBoard` drawn by `components/Room.tsx` inside the calendar placement.
+- **Tests:** unit for every helper incl. limits and midnight clearing, migration v7 → v8; e2e: add two, check one, reload, both persist and the board shows them.
+- **Docs first:** SPEC §2.3 (new US-10), §3.3 state, §4.5 screens, D20; AGENTS layout.
 - **Effort:** human ~1 day / CC ~1 hour.
 
 ### 7.3 Step B — Google Calendar on the board (read-only)
@@ -344,15 +355,23 @@ Two ways to get the data; pick one before building (Q7.2):
 | Backend | None | One stateless function (`app/api/ical/route.ts` → requires leaving pure static export or a separate function) |
 
 - **Architecture impact (B2):** today the app is `output: "export"` with no server. B2 needs one serverless route; switch to the default Next.js build on Vercel (pages stay static, one Node function). Update §3.1 and AGENTS.md when built.
-- **Board rendering:** times in the room's pencil style; the current event gets the window-light color (`--light`) as its only accent, consistent with "color only from light".
+- **Board rendering:** below the to-dos, today's events as "14:00 영어 스터디" lines in pencil; the next event is underlined. No color accent (the room's only color is the sky, D17).
 - **Failure states:** offline → last fetched agenda with "마지막 업데이트 14:20"; bad/expired URL or revoked token → board shows "캘린더 다시 연결" in place of events; never a modal.
 - **Tests:** iCal parsing (recurring events, all-day, time zones, today-only filter) as unit tests with fixture `.ics` files; function returns 400 on non-Google hosts (no open proxy).
 - **Effort:** B2 human ~2 days / CC ~2 hours; B1 similar code but more console setup.
 
-### 7.4 Open questions for these steps
-- **Q7.1** Board placement: render on the placed calendar item (recommended, since v5 every theme has one), or a separate always-present cork board?
+### 7.4 Open questions for these steps (answer before building)
+- **Q7.1** Empty calendar slot: show a base paper board so the to-dos are always visible (recommended), or show to-dos only when a calendar item is placed?
 - **Q7.2** Calendar source: B2 secret iCal (recommended for a single user, no re-login) or B1 Google sign-in?
 - **Q7.3** Which calendars: primary only, or let her pick several?
 - **Q7.4** Should finished to-dos count toward anything (e.g., a bonus piece)? Default no: rewards stay tied to study time only.
 
 Sources: [Use the token model](https://developers.google.com/identity/oauth2/web/guides/use-token-model), [Choose Google Calendar API scopes](https://developers.google.com/workspace/calendar/api/auth), [Sensitive scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/sensitive-scope-verification), [Manage App Audience](https://support.google.com/cloud/answer/15549945?hl=en).
+
+### 7.5 How a step starts
+When she says "A단계 시작" (or "B단계 시작"):
+1. Ask only the open questions for that step (A: Q7.1, Q7.4; B: Q7.2, Q7.3) with the recommended option first.
+2. Update SPEC (and AGENTS if layout changes) with the answers before writing code.
+3. Build, run every check in §7.0, screenshot the board in at least two themes and two window sizes.
+4. Commit (Conventional Commits) and push to `main`; confirm the Vercel deploy is Ready and the live bundle has the change.
+
