@@ -4,6 +4,7 @@ import {
   ITEM_BY_ID,
   PIECES,
   SKY_PHASES,
+  THEMES,
   THEME_BY_ID,
   WINDOWS,
   WINDOW_INFO,
@@ -248,6 +249,20 @@ export function place(s: State, slot: Slot, itemId: ItemId | null): State {
   if (!item || !s.unlockedThemes.includes(item.themeId)) throw new Error("ITEM_LOCKED");
   if (item.slot !== slot) throw new Error("SLOT_MISMATCH");
   return { ...s, room: { ...s.room, [slot]: itemId } };
+}
+
+/** The room theme: most placed items wins; ties go to the placed wallpaper's theme, then catalog order. */
+export function roomTheme(room: Partial<Record<Slot, ItemId>>): ThemeId | null {
+  const counts = new Map<ThemeId, number>();
+  for (const id of Object.values(room)) {
+    const t = id && ITEM_BY_ID[id]?.themeId;
+    if (t) counts.set(t, (counts.get(t) ?? 0) + 1);
+  }
+  if (!counts.size) return null;
+  const max = Math.max(...counts.values());
+  const top = THEMES.map((t) => t.id as ThemeId).filter((t) => counts.get(t) === max);
+  const wall = room.wallpaper && ITEM_BY_ID[room.wallpaper]?.themeId;
+  return wall && top.includes(wall) ? wall : top[0];
 }
 
 export function applyTheme(s: State, themeId: ThemeId): State {

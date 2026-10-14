@@ -1,7 +1,7 @@
 # StillRoom — Product Spec
 
 Source: user interview (2026-10).
-Status: v0.13 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
+Status: v0.14 (implemented). Live: https://stillroom-app.vercel.app (also https://jogakbang.vercel.app, kept so existing local data stays reachable).
 Sections: 1 Ideation · 2 PRD · 3 TRD · 4 Design Spec · 5 Open Questions · 6 Market Research & Decisions · 7 Next Development Steps (planned, not built). Agent instructions live in `AGENTS.md`.
 
 Platform decision: **laptop only** (desktop browser, landscape). No phone, no tablet, no sync.
@@ -209,11 +209,34 @@ Text on pastel fills uses `--text`, never white (contrast ≥ 4.5:1). Font: Pret
 - **Laptop only, landscape.** Scene is a 16:10 stage (1440×900 design size) scaled to fit the window with `object-fit: cover` behavior; narrower windows crop the side walls, never the window or desk. Minimum supported window: 1024×640.
 - Composition: window center back wall, shelf left wall, frame/poster right wall, desk across the bottom, lamp on desk, floor strip.
 - **White scene, color from light only** (supersedes the prism backdrop, D12). Inside the room SVG every art fill maps to three paper whites (`--paper-1` `#FFFFFF`, `--paper-2` `#F3F1ED`, `--paper-3` `#E4E0DA`); only ink details (eyes) stay dark. Color comes from light: the sky in the window (the sun takes the phase's `--light` color), the time-of-day room tint, and lamp and neon glows. The window light shaft was removed on 2026-10-14 (D15). Piece icons in the UI keep their colors (they are collectibles, not part of the scene).
+- **Lofi duotone: light area + shadow area** (D16, supersedes the room tint). Art stays paper white with its pencil outlines; color comes from two `multiply` layers over the whole room (the window glass excluded): a **light area** (a diagonal wedge from the upper right, `M1440 40 L760 470 L520 900 L1440 900 Z`, as in the lofi reference) in `--duo-light`, and the **shadow area** (everything else) in `--duo-shadow`. Lines inside each area take its tint, so outlines stay but read as part of the light or shadow.
+  - **Room theme:** the theme with the most placed items (tie: the theme of the placed wallpaper, then catalog order). No themed items → the phase colors alone.
+  - **Colors:** each phase has a light/shadow pair; the room theme's own pair is mixed in at 35% (`color-mix(in oklab, phase 65%, theme 35%)`). Both cross-fade over 2 s at phase changes.
+
+| Phase | light | shadow |
+|---|---|---|
+| predawn | `#F2D9EF` | `#8F9AD8` |
+| dawn | `#FFD6C2` | `#A9A6E0` |
+| morning | `#FFE7B8` | `#A8C8EA` |
+| midday | `#FFF1C9` | `#B4D4EE` |
+| afternoon | `#FFD9A0` | `#A9B8E6` |
+| evening | `#FFB98F` | `#8F8FD6` |
+| twilight | `#F4A7C4` | `#7D74C9` |
+| night | `#C9C6F5` | `#5E63A8` |
+
+| Theme | light | shadow |
+|---|---|---|
+| 새벽 정원 | mint `#D8F0D0` | sage `#7FB3A0` |
+| 햇살 카페 | cream `#FFE2B8` | caramel `#B9957A` |
+| 노을 고양이 | peach `#FFC9B0` | rose `#C9879A` |
+| 별밤 도서관 | lavender `#D6D0FF` | indigo `#6F78C4` |
+| 네온 글리치 | fixed `#FFD6EC` light pink | fixed `#BFE6FF` light sky (not time-based) |
+
 - **Lofi line-art form** (reference: lofi room illustration; form only):
   - Every opaque shape of the window frame, window view, curtains, shelf, desk, base objects, and room items is outlined in `--line-art` (a time-tinted graphite: the phase's `--prism-1` mixed into `#4A4857`). Compound shapes built from overlapping circles (clouds, hedges) are outlined once around the silhouette (stroke-under, fill-over), never along internal seams.
   - **Colored-pencil texture:** the whole line-art group runs through one static SVG filter: fractal-noise displacement (scale ≈ 2) for a hand-drawn wobble, and a noise mask that punches grain into strokes.
   - **Ground shadows** under the desk. (The palm-leaf shadow was removed on 2026-10-14.)
-  - **Neon glitch theme (retro punk):** its neon sign, neon tube, CRT screen, LED calendar, neon cactus, desk LED strip, and lit city windows are light sources, so they carry color: `--neon-pink` `#FF4FA3` and `--neon-cyan` `#2DE2E6`, plus colored glows that stay faintly visible even at midday (`max(var(--glow), 0.35)`). **Exception to the white scene:** the neon wallpaper is a saturated violet→magenta gradient (`#6A00F4` → `#FF006E`) with a cyan synthwave grid, so white objects stand out against it. Glitch is static: an RGB-split filter on the theme's items, CRT scanlines, and offset glitch bars. No animation.
+  - **Neon glitch theme (separate from the time-based colors):** when neon glitch is the room theme, the whole room switches to **dot-pixel art**: the line-art group uses an 8 px mosaic filter instead of the colored-pencil filter, and the duotone is fixed light pink / light sky. Easy on the eyes: neon parts use soft `--neon-pink` `#FF9ECF` and `--neon-cyan` `#8FD8FF`, the wallpaper is a pastel pink→sky gradient (`#FFD9EC` → `#CDEBFF`) with a soft pixel grid, and the static glitch is soft pink/sky ghost copies (3 px) behind each neon item. No animation. Neon items placed in another theme's room keep the soft glitch but are not pixelated.
   - Static only (no animated light), so the room stays cheap to leave open for hours.
 
 - **Slots (v6, 13):** `wallpaper`, `windowCover`, `windowView`, `lighting` (상단 전등: ceiling/top light), `deskLamp` (책상 위 전등; empty = the base swing-arm lamp, the room's main light), `calendar` (large, right wall; real date), `wallDecor` (small, upper left wall between the shelf and the window, clear of the window-time chip), `shelfObject`, `desk` (same footprint for every theme so desk objects sit at y=600), `deskObject1` (left of desk), `deskObject2` (center of desk), `plant` (left floor), `floor`. Empty slot = base art: white wall, open sky with hills, no cover, no top light, the base lamp, no calendar/wall decor, empty shelf, the base desk, notebooks + pencil cup, the monstera. Calendar and wall-decor art share one drawing size and are scaled into their spots (calendar ×1.9 on the right wall, wall decor ×0.5 on the left), with outline widths compensated so lines match the room.
@@ -308,6 +331,7 @@ Research on variable rewards: variable-ratio schedules drive the most consistent
 | D13 | Neon glitch theme: a 5th unlockable theme, static glitch (RGB split, scanlines, glitch bars), neon colors only on light-emitting parts | User request (2026-10-14): one retro-punk glitch theme, still (not animated). Keeps the "color only from light" rule by making neon and screens the light. | Whole-room glitch mode; periodic glitch flicker. |
 | D14 | 12 component slots, one item per slot per theme (60 items), independent placement; neon wallpaper is saturated; leaf shadow removed | User request (2026-10-14): split objects so each can be set separately (wallpaper, light, plant, desk, two desk objects, shelf object, calendar, window cover, ...), every theme providing one of each, and a saturated background for neon glitch. | Keeping 6 coarse slots; a whole-room theme toggle. |
 | D15 | 13 slots (top light and desk lamp split), calendar large on the right wall and wall decor small on the left, 8–9 items per theme (wallpaper only for 별밤 도서관 and 네온 글리치), recipes ×0.75, window light shaft removed | User request (2026-10-14). Fewer items per theme keeps each theme's character; cheaper recipes match the smaller sets. | One item per slot per theme (D14); keeping the light shaft. |
+| D16 | Room-wide lofi duotone (light area / shadow area, per phase, tinted by the room theme); neon glitch becomes a pixel-art room mode with soft pink/sky static glitch | User request (2026-10-14): base + shadow color per time like the lofi reference (shadow blue, light orange), outlines kept; neon was hard on the eyes. | Per-item theme colors; keeping the saturated neon wall. |
 
 Taste call to revisit after a week of real use: if themes still go too fast, raise recipes rather than shrinking drops (bigger drops are the fun part).
 

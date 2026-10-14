@@ -8,29 +8,21 @@ import { CalendarFace, Glitch, NEON_CYAN, NEON_PINK, v } from "../shared";
 // Pre-v5 items (blinds, neon sign, boombox, neon tube, CRT) live in items.tsx.
 
 function NeonWallpaper() {
-  const id = `neonwall${useId().replace(/[^a-zA-Z0-9]/g, "")}`;
-  // Synthwave grid: horizon at y=520, lines converging to the center.
-  const horizon = 520;
-  const rows = [530, 546, 568, 598, 640, 700];
-  const cols = Array.from({ length: 17 }, (_, i) => -480 + i * 150);
+  const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
   return (
     <g>
       <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={`neonwall${uid}`} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" style={{ stopColor: "var(--neon-wall-top)" }} />
           <stop offset="1" style={{ stopColor: "var(--neon-wall-bottom)" }} />
         </linearGradient>
+        {/* a soft pixel grid, like a magnified screen */}
+        <pattern id={`neongrid${uid}`} width="24" height="24" patternUnits="userSpaceOnUse">
+          <path d="M24 0 H0 V24" stroke="#ffffff" strokeWidth="1.5" fill="none" opacity="0.55" />
+        </pattern>
       </defs>
-      <rect className="no-line" width="1440" height="706" fill={`url(#${id})`} />
-      <g stroke={NEON_CYAN} strokeWidth="1.6" opacity="0.45" fill="none">
-        <path d={`M0 ${horizon} H1440`} />
-        {rows.map((y) => (
-          <path key={y} d={`M0 ${y} H1440`} />
-        ))}
-        {cols.map((x) => (
-          <path key={x} d={`M720 ${horizon} L${x} 706`} />
-        ))}
-      </g>
+      <rect className="no-line" width="1440" height="706" fill={`url(#neonwall${uid})`} />
+      <rect className="no-line" width="1440" height="706" fill={`url(#neongrid${uid})`} />
     </g>
   );
 }

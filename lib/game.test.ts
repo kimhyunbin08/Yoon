@@ -12,6 +12,7 @@ import {
   pieceCount,
   place,
   resume,
+  roomTheme,
   roll,
   skyPhaseAt,
   start,
@@ -216,6 +217,13 @@ describe("themes and room", () => {
       expect(new Set(slots).size).toBe(slots.length);
       expect(slots.every((sl) => (SLOTS as readonly string[]).includes(sl))).toBe(true);
     }
+  });
+
+  it("picks the room theme by most placed items, wallpaper breaking ties", () => {
+    expect(roomTheme({})).toBeNull();
+    expect(roomTheme({ desk: "paw-desk", floor: "cat-cushion", deskObject1: "crt-monitor" })).toBe("sunset-cat");
+    expect(roomTheme({ wallpaper: "neon-wallpaper", desk: "paw-desk" })).toBe("neon-glitch");
+    expect(roomTheme({ desk: "paw-desk", deskObject1: "crt-monitor" })).toBe("sunset-cat"); // tie: catalog order
   });
 
   it("lets slots mix items from different themes", () => {

@@ -1,6 +1,7 @@
 "use client";
 import { memo, useId, type ReactNode } from "react";
 import { ITEM_BY_ID, type ItemId, type SkyPhase, type Slot, type WindowView } from "../content/catalog";
+import { roomTheme } from "../lib/game";
 import { ITEM_ART, ITEM_GLOWS, type Glow } from "./art/items";
 
 // Stage is 1440x900. preserveAspectRatio="slice" crops the side walls on narrow windows,
@@ -46,6 +47,9 @@ const placeGlow = (g: Glow, { from, to, scale }: Placement): Glow => ({
   r: g.r * scale,
 });
 
+// Lofi duotone: the light area is a diagonal wedge from the upper right (lofi reference); the rest is shadow.
+const LIGHT_AREA = "M1440 40 L760 470 L520 900 L1440 900 Z";
+
 type Props = {
   room: Partial<Record<Slot, ItemId>>;
   phase: SkyPhase;
@@ -84,13 +88,16 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
       <C />
     );
   };
-  const pencil = `url(#pencil${uid})`;
+  const theme = roomTheme(room);
+  // Neon glitch is its own mode: the whole room becomes dot-pixel art instead of colored pencil.
+  const lineFilter = theme === "neon-glitch" ? `url(#pixel${uid})` : `url(#pencil${uid})`;
 
   return (
     <svg
       viewBox="0 0 1440 900"
       preserveAspectRatio="xMidYMid slice"
       className={`room ${className ?? ""}`}
+      data-room-theme={theme ?? undefined}
       aria-hidden={onSlot ? undefined : true}
     >
       <defs>
@@ -108,14 +115,38 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
             <stop offset="1" style={{ stopColor: `var(--neon-${c})`, stopOpacity: 0 }} />
           </radialGradient>
         ))}
-        {/* neon glitch theme: frozen RGB split, red copy left, cyan copy right (same id in every Room; identical content) */}
+        {/* neon glitch: soft static glitch, a light-pink ghost left and a light-sky ghost right (same id in every Room; identical content) */}
         <filter id="stillroom-rgbsplit" x="-5%" y="-10%" width="110%" height="120%">
-          <feOffset in="SourceGraphic" dx="-3" result="left" />
-          <feColorMatrix in="left" type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="red" />
-          <feOffset in="SourceGraphic" dx="3" result="right" />
-          <feColorMatrix in="right" type="matrix" values="0 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 1 0" result="cyan" />
-          <feBlend in="red" in2="cyan" mode="screen" />
+          <feOffset in="SourceAlpha" dx="-3" result="left" />
+          <feFlood floodColor="#ffb8dc" floodOpacity="0.9" />
+          <feComposite in2="left" operator="in" result="pink" />
+          <feOffset in="SourceAlpha" dx="3" result="right" />
+          <feFlood floodColor="#a9ddff" floodOpacity="0.9" />
+          <feComposite in2="right" operator="in" result="sky" />
+          <feMerge>
+            <feMergeNode in="pink" />
+            <feMergeNode in="sky" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
         </filter>
+        {/* neon glitch room: 8 px dot-pixel mosaic (sample one pixel per 8x8 cell, then grow it to fill the cell) */}
+        <filter id={`pixel${uid}`} filterUnits="userSpaceOnUse" primitiveUnits="userSpaceOnUse" x="0" y="0" width="1440" height="900">
+          <feFlood x="4" y="4" width="1" height="1" result="dot" />
+          <feComposite in="dot" width="8" height="8" result="cell" />
+          <feTile in="cell" result="grid" />
+          <feComposite in="SourceGraphic" in2="grid" operator="in" />
+          <feMorphology operator="dilate" radius="4" />
+        </filter>
+        {/* lofi duotone masks: the glass keeps its own sky colors */}
+        <mask id={`duo-light${uid}`}>
+          <path d={LIGHT_AREA} fill="white" />
+          <rect x="522" y="118" width="396" height="364" rx="12" fill="black" />
+        </mask>
+        <mask id={`duo-shadow${uid}`}>
+          <rect width="1440" height="900" fill="white" />
+          <path d={LIGHT_AREA} fill="black" />
+          <rect x="522" y="118" width="396" height="364" rx="12" fill="black" />
+        </mask>
         {/* colored-pencil lines: a slow wobble plus grain punched into the strokes */}
         <filter id={`pencil${uid}`} filterUnits="userSpaceOnUse" x="0" y="0" width="1440" height="900">
           <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="2" seed="4" result="warp" />
@@ -143,14 +174,14 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
       <g clipPath={`url(#glass${uid})`}>
         {/* the sky itself stays smooth; pencil grain on a large flat fill reads as TV static */}
         <rect x="522" y="118" width="396" height="364" fill={`url(#sky${uid})`} />
-        <g className="lineart" filter={pencil}>
+        <g className="lineart" filter={lineFilter}>
           <Sky phase={phase} uid={uid} />
           <View view={view} />
         </g>
       </g>
 
       {/* the room: every opaque shape gets a colored-pencil outline (globals.css .lineart) */}
-      <g className="lineart" filter={pencil}>
+      <g className="lineart" filter={lineFilter}>
         <rect y="706" width="1440" height="16" fill={v("cream")} />
         {[770, 820, 870].map((y) => (
           <rect key={y} y={y} width="1440" height="2" fill={v("floor-d")} opacity="0.5" />
@@ -185,7 +216,9 @@ function RoomScene({ room, phase, highlight, onSlot, className }: Props) {
         {Art("deskObject2") ?? <BaseDeskObjects />}
       </g>
 
-      <rect width="1440" height="900" style={{ fill: "var(--tint)", opacity: "var(--tint-opacity)", mixBlendMode: "multiply" }} />
+      {/* lofi duotone (SPEC §4.3): mask each layer, not a group, so multiply reaches the room */}
+      <rect width="1440" height="900" mask={`url(#duo-shadow${uid})`} style={{ fill: "var(--duo-shadow)", mixBlendMode: "multiply" }} />
+      <rect width="1440" height="900" mask={`url(#duo-light${uid})`} style={{ fill: "var(--duo-light)", mixBlendMode: "multiply" }} />
       {glows.map((g, i) =>
         g.color ? (
           // neon is its own light source: still faintly visible at midday
