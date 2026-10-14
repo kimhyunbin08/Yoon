@@ -31,6 +31,7 @@ import {
   removeTodo,
   toggleTodo,
 } from "../lib/todos";
+import { eventLabel, nextEventId, todayAgenda } from "../lib/calendar";
 import { connectGoogle, disconnectGoogle, googleEnabled, refreshAgenda, useGoogle } from "../lib/google";
 import { exportBackup, readBackup, useStore } from "../lib/store";
 import { PieceIcon } from "./art/pieces";
@@ -444,7 +445,7 @@ export function TodoPanel({
       )}
       <p className="mb-6 text-xs text-muted">Space 체크 · 더블클릭 고치기 · Delete 지우기 · Alt+↑↓ 순서 · 끝낸 일은 자정에 정리돼요</p>
 
-      {googleEnabled && <CalendarSection />}
+      {googleEnabled && <CalendarSection now={now} />}
 
       <section className="mb-6 rounded-2xl bg-surface-solid p-4" aria-label="인장">
         <div className="flex items-baseline justify-between">
@@ -519,9 +520,12 @@ export function TodoPanel({
   );
 }
 
-/** 캘린더 (SPEC US-12): connect once, then refresh or disconnect. Hidden when no Google client id is configured. */
-function CalendarSection() {
+/** 캘린더 (SPEC US-12): today's events, connect once, refresh or disconnect. Hidden when no Google client id is configured. */
+function CalendarSection({ now }: { now: number }) {
   const status = useGoogle((g) => g.status);
+  const items = useGoogle((g) => g.items);
+  const events = todayAgenda(items, now);
+  const next = nextEventId(events);
   const fetchedAt = useGoogle((g) => g.fetchedAt);
   const busy = useGoogle((g) => g.busy);
   const [error, setError] = useState("");
@@ -548,6 +552,19 @@ function CalendarSection() {
           <p className="mb-3 text-sm text-muted">
             {status === "reconnect" ? "연결이 끊겼어요. 다시 연결해 주세요." : fetchedAt ? `Google 캘린더 · 마지막 업데이트 ${time(fetchedAt)}` : "Google 캘린더 · 불러오는 중"}
           </p>
+          {status === "on" && (
+            <ul className="mb-3 flex flex-col gap-1 text-sm" aria-label="오늘 일정">
+              {events.length === 0 ? (
+                <li className="text-muted">오늘 남은 일정이 없어요.</li>
+              ) : (
+                events.map((e) => (
+                  <li key={e.id} className={`truncate ${e.id === next ? "font-semibold underline" : ""}`}>
+                    {eventLabel(e)}
+                  </li>
+                ))
+              )}
+            </ul>
+          )}
           <div className="flex gap-2">
             {status === "reconnect" ? (
               <button type="button" onClick={connect} className={`${btn} bg-primary`}>

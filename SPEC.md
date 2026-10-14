@@ -64,7 +64,7 @@ Accounts of our own (the optional Google sign-in only reads her calendar, D21), 
 | US-9 | not lose her room | Export / import a backup JSON file. Reminder after every 3rd unlocked theme. |
 | US-10 | keep today's to-dos on the wall | The calendar on the right wall is a paper board showing the date and up to 4 to-dos (open first, then today's done ones struck through, "+N" for the rest). An empty calendar slot shows a plain paper board. Click the board or press `5` to open the 할 일 drawer: Enter adds, click/Space checks, double-click edits, Delete removes, Alt+↑/↓ reorders. Done items clear at local midnight. Max 50 items, 80 chars each. No due times or alarms. |
 | US-11 | reward herself | Finishing **5 to-dos in a day earns 1 인장** (max 1 per day; unchecking below 5 the same day takes it back unless it was already spent). She writes her own rewards in the drawer ("나에게 주는 상", max 10). With **5 인장** she can claim one; it costs 5 and is logged with the date. Today's 인장 shows as a pencil stamp on the board. |
-| US-12 | see today's schedule on the wall | In the 할 일 drawer, "Google 캘린더 연결" opens Google's sign-in popup once; after that it stays connected (no re-login) until she presses "연결 끊기" or revokes access in her Google account. The board shows today's remaining events under the to-dos ("14:00 영어 스터디", all-day events as "종일"), the next one underlined, from every calendar she has checked in Google Calendar. Refreshes on open, every 15 min, and on "새로고침". Read-only. Offline keeps the last agenda; a revoked connection shows "캘린더 다시 연결" on the board, never a modal. |
+| US-12 | see today's schedule on the wall | In the 할 일 drawer, "Google 캘린더 연결" opens Google's sign-in popup once; after that it stays connected (no re-login) until she presses "연결 끊기" or revokes access in her Google account. The board shows today's remaining events under the to-dos ("14:00 영어 스터디", all-day events as "종일"), the next one underlined, from every calendar she has checked in Google Calendar. The 할 일 drawer lists all of today's remaining events in its 캘린더 section (the board shows only what fits). Refreshes on open, every 15 min, and on "새로고침". Read-only. Offline keeps the last agenda; a revoked connection shows "캘린더 다시 연결" on the board, never a modal. |
 
 ### 2.4 Game rules
 **Time windows** (device local time):
@@ -261,7 +261,7 @@ Text on pastel fills uses `--text`, never white (contrast ≥ 4.5:1). Font: Pret
 | Themes (테마) | Right drawer: live room preview per theme + recipe `have/need` | `열기` when complete, then `방에 통째로 적용` |
 | Decorate (꾸미기) | Room with slot highlights (click a slot), bottom sheet with slot tabs + items | click to place, `비우기` |
 | Records (기록) | Right drawer: today, last 7 days, 7-day bars | `백업하기`, `불러오기` (confirm before replacing) |
-| To-dos (할 일) | Right drawer: add field, the list (check, edit, delete, reorder), 인장 count with progress "오늘 3/5", 나에게 주는 상 (add, remove, claim when 인장 ≥ 5), claimed history, 캘린더 (connect / 새로고침 / 연결 끊기, last update time) | `5` or click the wall board |
+| To-dos (할 일) | Right drawer: add field, the list (check, edit, delete, reorder), 인장 count with progress "오늘 3/5", 나에게 주는 상 (add, remove, claim when 인장 ≥ 5), claimed history, 캘린더 (today's remaining events with the next one underlined, connect / 새로고침 / 연결 끊기, last update time) | `5` or click the wall board |
 
 Navigation: everything is one page; panels open over the room. Small floating menu (4 icons) on the room's left edge, keys `1–4`; hidden in ambient mode.
 
