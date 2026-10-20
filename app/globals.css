@@ -163,7 +163,7 @@ body {
   border: 1px solid var(--primary-line);
 }
 
-/* Room scene (SPEC §4.3): everything is paper white with pencil outlines; the only color is the sky in the window.
+/* Room scene (SPEC §4.3): everything is paper white with pencil outlines; the color is the sky in the window and its faint wash on wall and floor.
    Scoped to .room so collectible piece icons in the UI keep their colors. */
 .room {
   --paper-1: #ffffff;
@@ -171,9 +171,10 @@ body {
   --paper-3: #e4e0da;
   --c-white: var(--paper-1);
   --c-cream: var(--paper-1);
-  --c-wall: #fdfcfa;
+  /* wall and floor carry a faint wash of the window's sky (D23); --prism-1 is the phase's pastel, so night stays light */
+  --c-wall: color-mix(in oklab, var(--prism-1) 16%, #fdfcfa);
   --c-wall-d: var(--paper-3);
-  --c-floor: var(--paper-2);
+  --c-floor: color-mix(in oklab, var(--prism-1) 12%, var(--paper-2));
   --c-floor-d: var(--paper-3);
   --c-desk: var(--paper-1);
   --c-desk-d: var(--paper-2);
